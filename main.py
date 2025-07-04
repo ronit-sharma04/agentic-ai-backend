@@ -8,12 +8,13 @@ from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import create_react_agent
 from langchain_core.runnables import Runnable
 from langchain_core.messages import BaseMessage
-from tools.user_tools import (
-    create_user_tool,
-    read_user_tool,
-    update_user_tool,
-    delete_user_tool,
-)
+from tools.csi_tools import (
+    create_csi_tool,
+    read_csi_tool,
+    update_csi_tool,
+    delete_csi_tool,
+    bulk_delete_csi_tool
+)   
 
 load_dotenv()
 
@@ -21,11 +22,17 @@ class AgentState(dict):
     messages: List[dict]
 
 llm = ChatOpenAI(
-    model="gpt-4",
+    model="gpt-4o",
     temperature=0,
 )
 
-tools = [create_user_tool, read_user_tool, update_user_tool, delete_user_tool]
+tools = [
+    create_csi_tool,
+    read_csi_tool,
+    update_csi_tool,
+    delete_csi_tool,
+    bulk_delete_csi_tool,
+]
 agent = create_react_agent(llm, tools)
 react_agent: Runnable = agent.with_config({"run_name": "ReActAgent"})
 
@@ -45,7 +52,6 @@ def process_messages(messages: List[Dict[str, Any]], session_id: str = None) -> 
     if not isinstance(assistant_message, dict):
         assistant_message = assistant_message.model_dump()
     return assistant_message
-
 
 
 
