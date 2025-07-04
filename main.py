@@ -1,6 +1,8 @@
+# main.py
+
 import os
 from dotenv import load_dotenv
-from typing import TypedDict, List, Union
+from typing import List, Dict, Any
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import create_react_agent
@@ -12,89 +14,101 @@ from tools.user_tools import (
     update_user_tool,
     delete_user_tool,
 )
-from redis_store import get_message_history, save_message_history
 
 load_dotenv()
 
-# Define the type of agent state
-class AgentState(TypedDict):
+class AgentState(dict):
     messages: List[dict]
 
-# Load model
 llm = ChatOpenAI(
     model="gpt-4",
     temperature=0,
 )
 
-# Define tools and create agent
 tools = [create_user_tool, read_user_tool, update_user_tool, delete_user_tool]
 agent = create_react_agent(llm, tools)
 react_agent: Runnable = agent.with_config({"run_name": "ReActAgent"})
 
-# Create the LangGraph
 graph = StateGraph(AgentState)
 graph.add_node("agent", react_agent)
 graph.set_entry_point("agent")
 graph.add_edge("agent", END)
 app = graph.compile()
 
-# Helper: Convert all messages to dicts for Redis storage
-def serialize_messages(messages: List[Union[dict, BaseMessage]]) -> List[dict]:
-    return [
-        msg if isinstance(msg, dict) else msg.model_dump()
-        for msg in messages
-    ]
+def process_messages(messages: List[Dict[str, Any]], session_id: str = None) -> Dict[str, Any]:
+    """
+    Stateless: Given a list of messages and a session_id, returns the next assistant message.
+    """
+    # If you want to use session_id for logging or tool context, you can pass it here.
+    result = app.invoke({"messages": messages})
+    assistant_message = result["messages"][-1]
+    if not isinstance(assistant_message, dict):
+        assistant_message = assistant_message.model_dump()
+    return assistant_message
 
-if __name__ == "__main__":
-    session_id = "demo-session"  # Replace this with dynamic session/user ID in production
 
-    while True:
-        try:
-            user_input = input("\n> ")
-            if user_input.lower() in ["exit", "quit"]:
-                print("[System] Exiting...")
-                break
 
-            # Load conversation history from Redis
-            chat_history = get_message_history(session_id)
 
-            # Inject system prompt only once
-            if not chat_history:
-                chat_history.append({
-                    "role": "system",
-                    "content": """You are a helpful assistant who performs CRUD operations on a PostgreSQL database of users.
-                    Here is the table schema:
+# Complete Sample Output:
 
-                    Table "public.users"
-                    Column |          Type          | Collation | Nullable |              Default              
-                    --------+------------------------+-----------+----------+-----------------------------------
-                    id     | integer                |           | not null | nextval('users_id_seq'::regclass)
-                    name   | character varying(100) |           | not null | 
-                    email  | character varying(150) |           | not null | 
-
-                    Indexes:
-                        "users_pkey" PRIMARY KEY, btree (id)
-                        "users_email_key" UNIQUE CONSTRAINT, btree (email)
-                    """
-                })
-
-            # Add user message
-            chat_history.append({"role": "user", "content": user_input})
-
-            # Run through the agent
-            result = app.invoke({"messages": chat_history})
-
-            # Get assistant's reply
-            assistant_message = result["messages"][-1]
-            if not isinstance(assistant_message, dict):
-                assistant_message = assistant_message.model_dump()
-
-            # Append and persist the message
-            chat_history.append(assistant_message)
-            save_message_history(session_id, serialize_messages(chat_history))
-
-            # Output final reply
-            print("[OUTPUT]", assistant_message["content"])
-
-        except Exception as e:
-            print("[ERROR]", e)
+# {
+#   "response": "The new user \"Ronit\" with email \"tauhid@gmail.com\" has been successfully added to the table. The user ID is 12.",
+#   "history": [
+#     {
+#       "role": "system",
+#       "content": "You are a helpful assistant who performs CRUD operations on a PostgreSQL database of users.\n    Here is the table schema:\n\n    Table \"public.users\"\n    Column |          Type          | Collation | Nullable |              Default              \n    --------+------------------------+-----------+----------+-----------------------------------\n    id     | integer                |           | not null | nextval('users_id_seq'::regclass)\n    name   | character varying(100) |           | not null | \n    email  | character varying(150) |           | not null | \n\n    Indexes:\n        \"users_pkey\" PRIMARY KEY, btree (id)\n        \"users_email_key\" UNIQUE CONSTRAINT, btree (email)\n    "
+#     },
+#     {
+#       "role": "user",
+#       "content": "add a new user in the table with the name Ronit and gmail tauhid@gmail.com"
+#     },
+#     {
+#       "content": "The new user \"Ronit\" with email \"tauhid@gmail.com\" has been successfully added to the table. The user ID is 12.",
+#       "additional_kwargs": {
+#         "refusal": null
+#       },
+#       "response_metadata": {
+#         "token_usage": {
+#           "completion_tokens": 32,
+#           "prompt_tokens": 355,
+#           "total_tokens": 387,
+#           "completion_tokens_details": {
+#             "accepted_prediction_tokens": 0,
+#             "audio_tokens": 0,
+#             "reasoning_tokens": 0,
+#             "rejected_prediction_tokens": 0
+#           },
+#           "prompt_tokens_details": {
+#             "audio_tokens": 0,
+#             "cached_tokens": 0
+#           }
+#         },
+#         "model_name": "gpt-4-0613",
+#         "system_fingerprint": null,
+#         "id": "chatcmpl-BpW5QK0BnMkAj1nMwcXJnsUABcSyl",
+#         "service_tier": "default",
+#         "finish_reason": "stop",
+#         "logprobs": null
+#       },
+#       "type": "ai",
+#       "name": null,
+#       "id": "run--871258ae-c830-45fc-91eb-44e569112db5-0",
+#       "example": false,
+#       "tool_calls": [],
+#       "invalid_tool_calls": [],
+#       "usage_metadata": {
+#         "input_tokens": 355,
+#         "output_tokens": 32,
+#         "total_tokens": 387,
+#         "input_token_details": {
+#           "audio": 0,
+#           "cache_read": 0
+#         },
+#         "output_token_details": {
+#           "audio": 0,
+#           "reasoning": 0
+#         }
+#       }
+#     }
+#   ]
+# }
