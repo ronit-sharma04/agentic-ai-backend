@@ -1,20 +1,52 @@
 from db.connection import get_db_connection
+import pdb
+
 
 def create_csi(row: dict) -> str:
+    pdb.set_trace()
     print("[CREATE] Input row:", row)
-    cols = [k for k in row if row[k] is not None]
-    print("[CREATE] Non-null columns:", cols)
 
-    if 'csi_id' not in cols or not row.get('csi_id'):
+    # Validate csi_id
+    csi_id = row.get("csi_id")
+    if not csi_id:
         print("[CREATE ERROR] Missing required field: csi_id")
         return '[CREATE ERROR] Missing required field: csi_id'
 
-    vals = [row[k] for k in cols]
-    placeholders = ', '.join(['%s'] * len(cols))
-    sql = f"INSERT INTO csi ({', '.join(cols)}) VALUES ({placeholders}) RETURNING csi_id;"
+    # Define the full list of columns from the schema
+    ALL_COLUMNS = [
+        "csi_id", "sold_to_code", "sold_to_name", "sold_to_address_1", "sold_to_address_2", "sold_to_address_3",
+        "sold_to_address_4", "source_country", "source_country_code", "sourcing_cluster", "ship_to_code",
+        "ship_to_name", "ship_to_address_1", "ship_to_address_2", "ship_to_address_3", "ship_to_address_4",
+        "ship_to_country_code", "product_type", "payment_term", "kpi_l1", "kpi_l2", "kpi_l3", "bdm_name",
+        "bdm_email", "abdm_name", "abdm_email", "customer_service_1_name", "customer_service_1_email",
+        "customer_service_2_name", "customer_service_2_email", "customer_service_3_name", "customer_service_3_email",
+        "customer_service_strategy", "consignee", "notify_party", "notify_name", "notify_address_1",
+        "notify_address_2", "notify_address_3", "notify_address_4", "notify_attention_to1", "notify_email",
+        "one_bl_per_container", "bl_terminal", "bl_container_yard", "bl_attention_to", "freight_status",
+        "incoterm_code", "incoterm_description", "origin_charges", "freight_charges", "destination_charges",
+        "appointed_carrier_name", "appointed_carrier_add1", "appointed_carrier_add2", "appointed_carrier_add3",
+        "appointed_carrier_add4", "fcl", "lcl", "ftl", "order_submission_email", "inv_doc_email", "mail_comp_name",
+        "mail_comp_address_1", "mail_comp_address_2", "mail_comp_add3", "mail_comp_add4", "postal_code",
+        "prebooking_required", "delivery_time_slot", "delivery_days", "max_trips_per_day", "docs_needed_upon_delivery",
+        "other_specify", "packing_instruction", "pallet_type_or_size", "specific_packing_instructions",
+        "preloading_photos", "shipping_mark_on_pallet", "create_date", "modify_date", "csi_status",
+        "port_of_discharge", "port_of_discharge_code", "shipment_type", "draft_bl_validated_by_customer",
+        "ui_data_source", "pallet_double_stacking_of_pallets_yn", "pallet_length_m", "pallet_width_m",
+        "pallet_height_m", "pallet_double_stacking"
+    ]
+
+    # Ensure all fields are present: use provided values or default to ""
+    full_row = {col: row.get(col, "") for col in ALL_COLUMNS}
+
+    # Build the insert query
+    placeholders = ', '.join(['%s'] * len(ALL_COLUMNS))
+    sql = f"INSERT INTO csi ({', '.join(ALL_COLUMNS)}) VALUES ({placeholders}) RETURNING csi_id;"
+    vals = [full_row[col] for col in ALL_COLUMNS]
+
     print("[CREATE] SQL:", sql)
     print("[CREATE] Values:", vals)
 
+    # Execute query
     conn = get_db_connection()
     cur = conn.cursor()
     try:

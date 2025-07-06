@@ -3,7 +3,7 @@ from crud.csi_crud import create_csi, read_csi, update_csi, delete_csi, bulk_del
 
 @tool
 def create_csi_tool(row: dict) -> str:
-    """Create a CSI record. Provide a dict with all available fields. 'csi_id' is required."""
+    """Create a CSI record. 'csi_id' is the only required Field. Other Fields can be empty."""
     return create_csi(row)
 
 @tool
