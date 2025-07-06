@@ -5,6 +5,7 @@ from typing import Dict, List, Any
 from main import process_messages
 import datetime
 import json
+import re
 
 app = FastAPI()
 
@@ -20,10 +21,9 @@ class ChatRequest(BaseModel):
     session_id: str
     message: str
 
-
 class ChatSimpleResponse(BaseModel):
     message: str
-    data: List[Dict[str, Any]]  # Changed to List[Dict] for better structure
+    data: List[Dict[str, Any]]
 
 # In-memory session store (volatile; resets when the app restarts)
 session_histories: Dict[str, List[Dict[str, str]]] = {}
@@ -55,7 +55,7 @@ All your responses MUST follow this strict JSON format:
 
 {
   "message": "<human-readable explanation>",
-"data": "<result data in markdown format in strict array of JSONs>" 
+  "data": []
 }
 
 - **message**: Clearly explain what action was done or what’s needed.
@@ -163,6 +163,15 @@ All your responses MUST follow this strict JSON format:
 | pallet_width_m                      | numeric  | YES      |
 | pallet_height_m                     | numeric  | YES      |
 | pallet_double_stacking             | text     | YES      |
+
+
+Response Format:
+    class ChatSimpleResponse(BaseModel):
+      message: str
+      data: List[Dict[str, Any]] 
+keep this in mind always when responding to the user as this validation is done before sending back the response.
+
+If a user does not provides any non mandatory fields, you must still create the record with empty data type as mentioned in the schema, for numeric put null if possible or zero.
 You can suggest fields from this schema when asking the user for input.
 Always guide them with a clear message and a field table they can use as a reference.
 """
@@ -182,37 +191,52 @@ async def chat_endpoint(req: ChatRequest):
         log(f"[{process_id}] Loaded {len(chat_history)} messages for session '{req.session_id}'")
 
         if not chat_history:
-
             log(f"[{process_id}] No history found, injecting system prompt.")
-
             chat_history.append(SYSTEM_PROMPT)
 
         # Append the new user message
         log(f"[{process_id}] Appending user message: {req.message}")
-
         chat_history.append({"role": "user", "content": req.message})
 
         # Process message
         log(f"[{process_id}] Calling LangGraph process_messages()")
-
         assistant_message = process_messages(chat_history, session_id=req.session_id)
-
         log(f"[{process_id}] Assistant response: {assistant_message.get('content', '')}")
-
         chat_history.append(assistant_message)
-
-        # Save updated chat history
         session_histories[req.session_id] = chat_history
-
         log(f"[{process_id}] Updated session memory to {len(chat_history)} messages")
 
-        # import pdb
-        # pdb.set_trace()  # Debugging breakpoint
-
         log(f"=== PROCESS END [{process_id}] ===\n")
-        res = assistant_message["content"].replace("```", "").replace("json", "")
-        res_json = json.loads(res)
-        return ChatSimpleResponse(**res_json)
+        raw = assistant_message["content"]
+
+        # Remove code block markers if present
+        raw = re.sub(r"^```(?:json)?|```$", "", raw.strip(), flags=re.MULTILINE).strip()
+
+        # Try to extract a JSON object from anywhere in the string
+        json_match = re.search(r"(\{[\s\S]*\})", raw)
+        if json_match:
+            json_str = json_match.group(1)
+        else:
+            json_str = raw
+
+        try:
+            res_json = json.loads(json_str)
+        except Exception:
+            # fallback: just put the whole thing in message, empty data
+            res_json = {"message": raw, "data": []}
+
+        # Ensure 'data' is a list
+        data = res_json.get("data", [])
+        if isinstance(data, str):
+            try:
+                data = json.loads(data)
+            except Exception:
+                data = []
+        if not isinstance(data, list):
+            data = [data]  # fallback: wrap in list
+
+        message = res_json.get("message", "")
+        return ChatSimpleResponse(message=message, data=data)
 
     except Exception as e:
         log(f"=== PROCESS ERROR [{process_id}] === {e}\n")

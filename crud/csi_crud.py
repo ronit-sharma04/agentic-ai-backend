@@ -3,7 +3,6 @@ import pdb
 
 
 def create_csi(row: dict) -> str:
-    pdb.set_trace()
     print("[CREATE] Input row:", row)
 
     # Validate csi_id
@@ -11,6 +10,12 @@ def create_csi(row: dict) -> str:
     if not csi_id:
         print("[CREATE ERROR] Missing required field: csi_id")
         return '[CREATE ERROR] Missing required field: csi_id'
+
+    # Numeric columns
+    NUMERIC_COLUMNS = ["pallet_length_m", "pallet_width_m", "pallet_height_m"]
+    for col in NUMERIC_COLUMNS:
+        if row.get(col, "") == "":
+            row[col] = None
 
     # Define the full list of columns from the schema
     ALL_COLUMNS = [
@@ -37,6 +42,11 @@ def create_csi(row: dict) -> str:
 
     # Ensure all fields are present: use provided values or default to ""
     full_row = {col: row.get(col, "") for col in ALL_COLUMNS}
+
+    # Numeric columns again (in case they were missing)
+    for col in NUMERIC_COLUMNS:
+        if full_row.get(col, "") == "":
+            full_row[col] = None
 
     # Build the insert query
     placeholders = ', '.join(['%s'] * len(ALL_COLUMNS))
@@ -162,6 +172,11 @@ def delete_csi(csi_id: str) -> str:
 
 def bulk_delete_csi(**criteria) -> str:
     print("[BULK DELETE] Input criteria:", criteria)
+
+    NUMERIC_COLUMNS = ["pallet_length_m", "pallet_width_m", "pallet_height_m"]
+    for col in NUMERIC_COLUMNS:
+        if col in criteria and criteria[col] == "":
+            criteria[col] = None
 
     if not criteria:
         print("[BULK DELETE] No conditions provided.")
