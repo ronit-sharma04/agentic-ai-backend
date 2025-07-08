@@ -1,317 +1,45 @@
 from langchain_core.tools import tool
 from typing import Optional
-from crud.csi_crud import create_csi, read_csi, update_csi, delete_csi, bulk_delete_csi
+from crud.csi_crud import create_csi, read_csi, update_csi, delete_csi
+from pydantic import ValidationError,BaseModel
+import logging
 
 @tool
-def read_csi_tool(csi_id: Optional[str] = None, sold_to_name: Optional[str] = None) -> str:
-    """Read CSI records by csi_id or partial sold_to_name."""
-    return read_csi(csi_id=csi_id, sold_to_name=sold_to_name)
+def read_csi_tool(id: Optional[str] = None, sold_to_comp_name: Optional[str] = None) -> str:
+    """
+    Read CSI records by id (string, unique record id) or by partial sold_to_comp_name.
+    """
+    print(f"[READ TOOL] Called with id={id}, sold_to_comp_name={sold_to_comp_name}")
+    return read_csi(id=id, sold_to_comp_name=sold_to_comp_name)
 
 @tool
-def delete_csi_tool(csi_id: str) -> str:
-    """Delete a CSI record by csi_id."""
-    return delete_csi(csi_id=csi_id)
+def delete_csi_tool(id: str) -> str:
+    """Delete a CSI record by id."""
+    print(f"[DELETE TOOL] Called with id={id}")
+    return delete_csi(id=id)
+
+class CSIToolArgs(BaseModel):
+    sold_to_code: Optional[str] = ""
+    sold_to_comp_name: Optional[str] = ""
+    # Add other fields as needed
 
 @tool
-def create_csi_tool(
-    csi_id: str,
-    sold_to_code: str = "",
-    sold_to_name: str = "",
-    sold_to_address_1: str = "",
-    sold_to_address_2: str = "",
-    sold_to_address_3: str = "",
-    sold_to_address_4: str = "",
-    source_country: str = "",
-    source_country_code: str = "",
-    sourcing_cluster: str = "",
-    ship_to_code: str = "",
-    ship_to_name: str = "",
-    ship_to_address_1: str = "",
-    ship_to_address_2: str = "",
-    ship_to_address_3: str = "",
-    ship_to_address_4: str = "",
-    ship_to_country_code: str = "",
-    product_type: str = "",
-    payment_term: str = "",
-    kpi_l1: str = "",
-    kpi_l2: str = "",
-    kpi_l3: str = "",
-    bdm_name: str = "",
-    bdm_email: str = "",
-    abdm_name: str = "",
-    abdm_email: str = "",
-    customer_service_1_name: str = "",
-    customer_service_1_email: str = "",
-    customer_service_2_name: str = "",
-    customer_service_2_email: str = "",
-    customer_service_3_name: str = "",
-    customer_service_3_email: str = "",
-    customer_service_strategy: str = "",
-    consignee: str = "",
-    notify_party: str = "",
-    notify_name: str = "",
-    notify_address_1: str = "",
-    notify_address_2: str = "",
-    notify_address_3: str = "",
-    notify_address_4: str = "",
-    notify_attention_to1: str = "",
-    notify_email: str = "",
-    one_bl_per_container: str = "",
-    bl_terminal: str = "",
-    bl_container_yard: str = "",
-    bl_attention_to: str = "",
-    freight_status: str = "",
-    incoterm_code: str = "",
-    incoterm_description: str = "",
-    origin_charges: str = "",
-    freight_charges: str = "",
-    destination_charges: str = "",
-    appointed_carrier_name: str = "",
-    appointed_carrier_add1: str = "",
-    appointed_carrier_add2: str = "",
-    appointed_carrier_add3: str = "",
-    appointed_carrier_add4: str = "",
-    fcl: str = "",
-    lcl: str = "",
-    ftl: str = "",
-    order_submission_email: str = "",
-    inv_doc_email: str = "",
-    mail_comp_name: str = "",
-    mail_comp_address_1: str = "",
-    mail_comp_address_2: str = "",
-    mail_comp_add3: str = "",
-    mail_comp_add4: str = "",
-    postal_code: str = "",
-    prebooking_required: str = "",
-    delivery_time_slot: str = "",
-    delivery_days: str = "",
-    max_trips_per_day: str = "",
-    docs_needed_upon_delivery: str = "",
-    other_specify: str = "",
-    packing_instruction: str = "",
-    pallet_type_or_size: str = "",
-    specific_packing_instructions: str = "",
-    preloading_photos: str = "",
-    shipping_mark_on_pallet: str = "",
-    create_date: str = "",
-    modify_date: str = "",
-    csi_status: str = "",
-    port_of_discharge: str = "",
-    port_of_discharge_code: str = "",
-    shipment_type: str = "",
-    draft_bl_validated_by_customer: str = "",
-    ui_data_source: str = "",
-    pallet_double_stacking_of_pallets_yn: str = "",
-    pallet_length_m: Optional[float] = None,
-    pallet_width_m: Optional[float] = None,
-    pallet_height_m: Optional[float] = None,
-    pallet_double_stacking: str = ""
-) -> str:
+def create_csi_tool(inputs: CSIToolArgs) -> str:
     """
-    Create a CSI record. 'csi_id' is the only required field. All other fields are optional and default to empty string or None.
+    Create a CSI record. Accepts any fields from the schema except '_id'.
     """
-    row = locals()
-    return create_csi(row)
+    logging.debug("create_csi_tool called with inputs: %s", inputs)
+    try:
+        # Convert inputs to a dictionary
+        data = inputs.model_dump()
 
-@tool
-def update_csi_tool(
-    csi_id: str,
-    sold_to_code: Optional[str] = None,
-    sold_to_name: Optional[str] = None,
-    sold_to_address_1: Optional[str] = None,
-    sold_to_address_2: Optional[str] = None,
-    sold_to_address_3: Optional[str] = None,
-    sold_to_address_4: Optional[str] = None,
-    source_country: Optional[str] = None,
-    source_country_code: Optional[str] = None,
-    sourcing_cluster: Optional[str] = None,
-    ship_to_code: Optional[str] = None,
-    ship_to_name: Optional[str] = None,
-    ship_to_address_1: Optional[str] = None,
-    ship_to_address_2: Optional[str] = None,
-    ship_to_address_3: Optional[str] = None,
-    ship_to_address_4: Optional[str] = None,
-    ship_to_country_code: Optional[str] = None,
-    product_type: Optional[str] = None,
-    payment_term: Optional[str] = None,
-    kpi_l1: Optional[str] = None,
-    kpi_l2: Optional[str] = None,
-    kpi_l3: Optional[str] = None,
-    bdm_name: Optional[str] = None,
-    bdm_email: Optional[str] = None,
-    abdm_name: Optional[str] = None,
-    abdm_email: Optional[str] = None,
-    customer_service_1_name: Optional[str] = None,
-    customer_service_1_email: Optional[str] = None,
-    customer_service_2_name: Optional[str] = None,
-    customer_service_2_email: Optional[str] = None,
-    customer_service_3_name: Optional[str] = None,
-    customer_service_3_email: Optional[str] = None,
-    customer_service_strategy: Optional[str] = None,
-    consignee: Optional[str] = None,
-    notify_party: Optional[str] = None,
-    notify_name: Optional[str] = None,
-    notify_address_1: Optional[str] = None,
-    notify_address_2: Optional[str] = None,
-    notify_address_3: Optional[str] = None,
-    notify_address_4: Optional[str] = None,
-    notify_attention_to1: Optional[str] = None,
-    notify_email: Optional[str] = None,
-    one_bl_per_container: Optional[str] = None,
-    bl_terminal: Optional[str] = None,
-    bl_container_yard: Optional[str] = None,
-    bl_attention_to: Optional[str] = None,
-    freight_status: Optional[str] = None,
-    incoterm_code: Optional[str] = None,
-    incoterm_description: Optional[str] = None,
-    origin_charges: Optional[str] = None,
-    freight_charges: Optional[str] = None,
-    destination_charges: Optional[str] = None,
-    appointed_carrier_name: Optional[str] = None,
-    appointed_carrier_add1: Optional[str] = None,
-    appointed_carrier_add2: Optional[str] = None,
-    appointed_carrier_add3: Optional[str] = None,
-    appointed_carrier_add4: Optional[str] = None,
-    fcl: Optional[str] = None,
-    lcl: Optional[str] = None,
-    ftl: Optional[str] = None,
-    order_submission_email: Optional[str] = None,
-    inv_doc_email: Optional[str] = None,
-    mail_comp_name: Optional[str] = None,
-    mail_comp_address_1: Optional[str] = None,
-    mail_comp_address_2: Optional[str] = None,
-    mail_comp_add3: Optional[str] = None,
-    mail_comp_add4: Optional[str] = None,
-    postal_code: Optional[str] = None,
-    prebooking_required: Optional[str] = None,
-    delivery_time_slot: Optional[str] = None,
-    delivery_days: Optional[str] = None,
-    max_trips_per_day: Optional[str] = None,
-    docs_needed_upon_delivery: Optional[str] = None,
-    other_specify: Optional[str] = None,
-    packing_instruction: Optional[str] = None,
-    pallet_type_or_size: Optional[str] = None,
-    specific_packing_instructions: Optional[str] = None,
-    preloading_photos: Optional[str] = None,
-    shipping_mark_on_pallet: Optional[str] = None,
-    create_date: Optional[str] = None,
-    modify_date: Optional[str] = None,
-    csi_status: Optional[str] = None,
-    port_of_discharge: Optional[str] = None,
-    port_of_discharge_code: Optional[str] = None,
-    shipment_type: Optional[str] = None,
-    draft_bl_validated_by_customer: Optional[str] = None,
-    ui_data_source: Optional[str] = None,
-    pallet_double_stacking_of_pallets_yn: Optional[str] = None,
-    pallet_length_m: Optional[float] = None,
-    pallet_width_m: Optional[float] = None,
-    pallet_height_m: Optional[float] = None,
-    pallet_double_stacking: Optional[str] = None
-) -> str:
-    """
-    Update a CSI record. Provide csi_id and any fields to update (all are optional except csi_id).
-    """
-    updates = {k: v for k, v in locals().items() if k != "csi_id" and v is not None}
-    return update_csi(csi_id, updates)
-
-
-@tool
-def bulk_delete_csi_tool(
-    csi_id: Optional[str] = None,
-    sold_to_code: Optional[str] = None,
-    sold_to_name: Optional[str] = None,
-    sold_to_address_1: Optional[str] = None,
-    sold_to_address_2: Optional[str] = None,
-    sold_to_address_3: Optional[str] = None,
-    sold_to_address_4: Optional[str] = None,
-    source_country: Optional[str] = None,
-    source_country_code: Optional[str] = None,
-    sourcing_cluster: Optional[str] = None,
-    ship_to_code: Optional[str] = None,
-    ship_to_name: Optional[str] = None,
-    ship_to_address_1: Optional[str] = None,
-    ship_to_address_2: Optional[str] = None,
-    ship_to_address_3: Optional[str] = None,
-    ship_to_address_4: Optional[str] = None,
-    ship_to_country_code: Optional[str] = None,
-    product_type: Optional[str] = None,
-    payment_term: Optional[str] = None,
-    kpi_l1: Optional[str] = None,
-    kpi_l2: Optional[str] = None,
-    kpi_l3: Optional[str] = None,
-    bdm_name: Optional[str] = None,
-    bdm_email: Optional[str] = None,
-    abdm_name: Optional[str] = None,
-    abdm_email: Optional[str] = None,
-    customer_service_1_name: Optional[str] = None,
-    customer_service_1_email: Optional[str] = None,
-    customer_service_2_name: Optional[str] = None,
-    customer_service_2_email: Optional[str] = None,
-    customer_service_3_name: Optional[str] = None,
-    customer_service_3_email: Optional[str] = None,
-    customer_service_strategy: Optional[str] = None,
-    consignee: Optional[str] = None,
-    notify_party: Optional[str] = None,
-    notify_name: Optional[str] = None,
-    notify_address_1: Optional[str] = None,
-    notify_address_2: Optional[str] = None,
-    notify_address_3: Optional[str] = None,
-    notify_address_4: Optional[str] = None,
-    notify_attention_to1: Optional[str] = None,
-    notify_email: Optional[str] = None,
-    one_bl_per_container: Optional[str] = None,
-    bl_terminal: Optional[str] = None,
-    bl_container_yard: Optional[str] = None,
-    bl_attention_to: Optional[str] = None,
-    freight_status: Optional[str] = None,
-    incoterm_code: Optional[str] = None,
-    incoterm_description: Optional[str] = None,
-    origin_charges: Optional[str] = None,
-    freight_charges: Optional[str] = None,
-    destination_charges: Optional[str] = None,
-    appointed_carrier_name: Optional[str] = None,
-    appointed_carrier_add1: Optional[str] = None,
-    appointed_carrier_add2: Optional[str] = None,
-    appointed_carrier_add3: Optional[str] = None,
-    appointed_carrier_add4: Optional[str] = None,
-    fcl: Optional[str] = None,
-    lcl: Optional[str] = None,
-    ftl: Optional[str] = None,
-    order_submission_email: Optional[str] = None,
-    inv_doc_email: Optional[str] = None,
-    mail_comp_name: Optional[str] = None,
-    mail_comp_address_1: Optional[str] = None,
-    mail_comp_address_2: Optional[str] = None,
-    mail_comp_add3: Optional[str] = None,
-    mail_comp_add4: Optional[str] = None,
-    postal_code: Optional[str] = None,
-    prebooking_required: Optional[str] = None,
-    delivery_time_slot: Optional[str] = None,
-    delivery_days: Optional[str] = None,
-    max_trips_per_day: Optional[str] = None,
-    docs_needed_upon_delivery: Optional[str] = None,
-    other_specify: Optional[str] = None,
-    packing_instruction: Optional[str] = None,
-    pallet_type_or_size: Optional[str] = None,
-    specific_packing_instructions: Optional[str] = None,
-    preloading_photos: Optional[str] = None,
-    shipping_mark_on_pallet: Optional[str] = None,
-    create_date: Optional[str] = None,
-    modify_date: Optional[str] = None,
-    csi_status: Optional[str] = None,
-    port_of_discharge: Optional[str] = None,
-    port_of_discharge_code: Optional[str] = None,
-    shipment_type: Optional[str] = None,
-    draft_bl_validated_by_customer: Optional[str] = None,
-    ui_data_source: Optional[str] = None,
-    pallet_double_stacking_of_pallets_yn: Optional[str] = None,
-    pallet_length_m: Optional[float] = None,
-    pallet_width_m: Optional[float] = None,
-    pallet_height_m: Optional[float] = None,
-    pallet_double_stacking: Optional[str] = None
-) -> str:
-    """
-    Bulk delete CSI records by criteria. All keys must match columns. Numeric fields should be numbers or null.
-    """
-    criteria = {k: v for k, v in locals().items() if v is not None}
-    return bulk_delete_csi(**criteria)
+        # Call the create function
+        result = create_csi(**data)
+        logging.debug("create_csi result: %s", result)
+        return result
+    except ValidationError as e:
+        logging.error("Validation error in create_csi_tool: %s", e)
+        return "[CREATE ERROR] Validation error occurred."
+    except Exception as e:
+        logging.error("Error in create_csi_tool: %s", e)
+        return "[CREATE ERROR] An unexpected error occurred."

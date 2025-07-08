@@ -11,9 +11,8 @@ from langchain_core.messages import BaseMessage
 from tools.csi_tools import (
     create_csi_tool,
     read_csi_tool,
-    update_csi_tool,
-    delete_csi_tool,
-    bulk_delete_csi_tool
+    # update_csi_tool,
+    # delete_csi_tool,
 )   
 
 load_dotenv()
@@ -29,9 +28,8 @@ llm = ChatOpenAI(
 tools = [
     create_csi_tool,
     read_csi_tool,
-    update_csi_tool,
-    delete_csi_tool,
-    bulk_delete_csi_tool,
+    # update_csi_tool,
+    # delete_csi_tool,
 ]
 agent = create_react_agent(llm, tools)
 react_agent: Runnable = agent.with_config({"run_name": "ReActAgent"})
@@ -41,17 +39,23 @@ graph.add_node("agent", react_agent)
 graph.set_entry_point("agent")
 graph.add_edge("agent", END)
 app = graph.compile()
+# import logging
 
-def process_messages(messages: List[Dict[str, Any]], session_id: str = None) -> Dict[str, Any]:
-    """
-    Stateless: Given a list of messages and a session_id, returns the next assistant message.
-    """
-    # If you want to use session_id for logging or tool context, you can pass it here.
-    result = app.invoke({"messages": messages})
-    assistant_message = result["messages"][-1]
-    if not isinstance(assistant_message, dict):
-        assistant_message = assistant_message.model_dump()
-    return assistant_message
+# # Configure logging
+# logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+def process_messages(messages: List[Dict[str, Any]], session_id: str = None, system_prompt: str = None) -> Dict[str, Any]:
+    # logging.debug("process_messages called with messages: %s", messages)
+    # logging.debug("Session ID: %s, System Prompt: %s", session_id, system_prompt)
+    try:
+        result = app.invoke({"messages": messages, "system_prompt": system_prompt})
+        assistant_message = result["messages"][-1]
+        # logging.debug("Assistant message: %s", assistant_message)
+        if not isinstance(assistant_message, dict):
+            assistant_message = assistant_message.model_dump()
+        return assistant_message
+    except Exception as e:
+        # logging.error("Error in process_messages: %s", e)
+        raise
 
 
 

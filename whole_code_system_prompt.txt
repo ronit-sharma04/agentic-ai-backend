@@ -1,0 +1,849 @@
+crud/csi_crud.py:
+from db.connection import get_db_connection
+import pdb
+
+
+def create_csi(row: dict) -> str:
+    print("[CREATE] Input row:", row)
+
+    # Validate csi_id
+    csi_id = row.get("csi_id")
+    if not csi_id:
+        print("[CREATE ERROR] Missing required field: csi_id")
+        return '[CREATE ERROR] Missing required field: csi_id'
+
+    # Numeric columns
+    NUMERIC_COLUMNS = ["pallet_length_m", "pallet_width_m", "pallet_height_m"]
+    for col in NUMERIC_COLUMNS:
+        if row.get(col, "") == "":
+            row[col] = None
+
+    # Define the full list of columns from the schema
+    ALL_COLUMNS = [
+        "csi_id", "sold_to_code", "sold_to_name", "sold_to_address_1", "sold_to_address_2", "sold_to_address_3",
+        "sold_to_address_4", "source_country", "source_country_code", "sourcing_cluster", "ship_to_code",
+        "ship_to_name", "ship_to_address_1", "ship_to_address_2", "ship_to_address_3", "ship_to_address_4",
+        "ship_to_country_code", "product_type", "payment_term", "kpi_l1", "kpi_l2", "kpi_l3", "bdm_name",
+        "bdm_email", "abdm_name", "abdm_email", "customer_service_1_name", "customer_service_1_email",
+        "customer_service_2_name", "customer_service_2_email", "customer_service_3_name", "customer_service_3_email",
+        "customer_service_strategy", "consignee", "notify_party", "notify_name", "notify_address_1",
+        "notify_address_2", "notify_address_3", "notify_address_4", "notify_attention_to1", "notify_email",
+        "one_bl_per_container", "bl_terminal", "bl_container_yard", "bl_attention_to", "freight_status",
+        "incoterm_code", "incoterm_description", "origin_charges", "freight_charges", "destination_charges",
+        "appointed_carrier_name", "appointed_carrier_add1", "appointed_carrier_add2", "appointed_carrier_add3",
+        "appointed_carrier_add4", "fcl", "lcl", "ftl", "order_submission_email", "inv_doc_email", "mail_comp_name",
+        "mail_comp_address_1", "mail_comp_address_2", "mail_comp_add3", "mail_comp_add4", "postal_code",
+        "prebooking_required", "delivery_time_slot", "delivery_days", "max_trips_per_day", "docs_needed_upon_delivery",
+        "other_specify", "packing_instruction", "pallet_type_or_size", "specific_packing_instructions",
+        "preloading_photos", "shipping_mark_on_pallet", "create_date", "modify_date", "csi_status",
+        "port_of_discharge", "port_of_discharge_code", "shipment_type", "draft_bl_validated_by_customer",
+        "ui_data_source", "pallet_double_stacking_of_pallets_yn", "pallet_length_m", "pallet_width_m",
+        "pallet_height_m", "pallet_double_stacking"
+    ]
+
+    # Ensure all fields are present: use provided values or default to ""
+    full_row = {col: row.get(col, "") for col in ALL_COLUMNS}
+
+    # Numeric columns again (in case they were missing)
+    for col in NUMERIC_COLUMNS:
+        if full_row.get(col, "") == "":
+            full_row[col] = None
+
+    # Build the insert query
+    placeholders = ', '.join(['%s'] * len(ALL_COLUMNS))
+    sql = f"INSERT INTO csi ({', '.join(ALL_COLUMNS)}) VALUES ({placeholders}) RETURNING csi_id;"
+    vals = [full_row[col] for col in ALL_COLUMNS]
+
+    print("[CREATE] SQL:", sql)
+    print("[CREATE] Values:", vals)
+
+    # Execute query
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute(sql, vals)
+        new_id = cur.fetchone()[0]
+        conn.commit()
+        print("[CREATE] Inserted csi_id:", new_id)
+        return f"CSI row created with csi_id: {new_id}"
+    except Exception as e:
+        conn.rollback()
+        print("[CREATE ERROR]", e)
+        return f"[CREATE ERROR] {e}"
+    finally:
+        cur.close()
+        conn.close()
+        print("[CREATE] Connection closed.")
+
+def read_csi(csi_id: str = None, sold_to_name: str = None) -> str:
+    print("[READ] Params - csi_id:", csi_id, ", sold_to_name:", sold_to_name)
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        if csi_id:
+            sql = "SELECT * FROM csi WHERE csi_id = %s;"
+            print("[READ] SQL:", sql)
+            cur.execute(sql, (csi_id,))
+        elif sold_to_name:
+            sql = "SELECT * FROM csi WHERE sold_to_name ILIKE %s;"
+            print("[READ] SQL:", sql)
+            cur.execute(sql, (f"%{sold_to_name}%",))
+        else:
+            sql = "SELECT * FROM csi LIMIT 50;"
+            print("[READ] SQL:", sql)
+            cur.execute(sql)
+
+        rows = cur.fetchall()
+        if not rows:
+            print("[READ] No records found.")
+            return "No CSI records found."
+
+        columns = [desc[0] for desc in cur.description]
+        print("[READ] Columns:", columns)
+        return "\n---\n".join([
+            ', '.join(f"{col}: {val}" for col, val in zip(columns, row)) for row in rows
+        ])
+    except Exception as e:
+        print("[READ ERROR]", e)
+        return f"[READ ERROR] {e}"
+    finally:
+        cur.close()
+        conn.close()
+        print("[READ] Connection closed.")
+
+def update_csi(csi_id: str, updates: dict) -> str:
+    print("[UPDATE] csi_id:", csi_id)
+    print("[UPDATE] Updates before filtering:", updates)
+
+    updates = {k: v for k, v in updates.items() if k != 'csi_id'}
+    print("[UPDATE] Valid updates:", updates)
+
+    if not updates:
+        print("[UPDATE ERROR] No valid fields to update.")
+        return "[UPDATE ERROR] No valid fields to update."
+
+    set_clause = ', '.join([f"{k} = %s" for k in updates])
+    values = list(updates.values()) + [csi_id]
+    sql = f"UPDATE csi SET {set_clause} WHERE csi_id = %s;"
+    print("[UPDATE] SQL:", sql)
+    print("[UPDATE] Values:", values)
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute(sql, values)
+        conn.commit()
+        if cur.rowcount:
+            print("[UPDATE] Record updated.")
+            return "CSI record updated successfully."
+        else:
+            print("[UPDATE] No record found.")
+            return f"No CSI record found with csi_id {csi_id}."
+    except Exception as e:
+        conn.rollback()
+        print("[UPDATE ERROR]", e)
+        return f"[UPDATE ERROR] {e}"
+    finally:
+        cur.close()
+        conn.close()
+        print("[UPDATE] Connection closed.")
+
+def delete_csi(csi_id: str) -> str:
+    print("[DELETE] csi_id:", csi_id)
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute("DELETE FROM csi WHERE csi_id = %s RETURNING csi_id;", (csi_id,))
+        deleted = cur.fetchone()
+        conn.commit()
+        if deleted:
+            print("[DELETE] Deleted csi_id:", deleted[0])
+            return f"CSI record with csi_id {csi_id} deleted successfully."
+        else:
+            print("[DELETE] No record found.")
+            return f"No CSI record found with csi_id {csi_id}."
+    except Exception as e:
+        conn.rollback()
+        print("[DELETE ERROR]", e)
+        return f"[DELETE ERROR] {e}"
+    finally:
+        cur.close()
+        conn.close()
+        print("[DELETE] Connection closed.")
+
+def bulk_delete_csi(**criteria) -> str:
+    print("[BULK DELETE] Input criteria:", criteria)
+
+    NUMERIC_COLUMNS = ["pallet_length_m", "pallet_width_m", "pallet_height_m"]
+    for col in NUMERIC_COLUMNS:
+        if col in criteria and criteria[col] == "":
+            criteria[col] = None
+
+    if not criteria:
+        print("[BULK DELETE] No conditions provided.")
+        return "No conditions provided for bulk delete."
+
+    allowed = set([...])  # Truncated for readability
+    for k in list(criteria):
+        if k not in allowed:
+            print(f"[BULK DELETE] Removing invalid key: {k}")
+            criteria.pop(k)
+
+    if not criteria:
+        print("[BULK DELETE] No valid conditions after filtering.")
+        return "No valid conditions for bulk delete."
+
+    where_clause = " AND ".join([f"{k} = %s" for k in criteria])
+    params = [v for v in criteria.values()]
+    print("[BULK DELETE] SQL WHERE clause:", where_clause)
+    print("[BULK DELETE] Params:", params)
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute(f"SELECT csi_id FROM csi WHERE {where_clause};", params)
+        to_delete = [r[0] for r in cur.fetchall()]
+        print("[BULK DELETE] Matching records:", to_delete)
+
+        if not to_delete:
+            print("[BULK DELETE] No records to delete.")
+            return "No CSI records matched the given conditions."
+
+        cur.execute(f"DELETE FROM csi WHERE {where_clause};", params)
+        conn.commit()
+        print("[BULK DELETE] Deleted records:", to_delete)
+        return f"Deleted csi_id(s): {', '.join(to_delete)}"
+    except Exception as e:
+        conn.rollback()
+        print("[BULK DELETE ERROR]", e)
+        return f"[BULK DELETE ERROR] {e}"
+    finally:
+        cur.close()
+        conn.close()
+        print("[BULK DELETE] Connection closed.")
+
+
+
+tools/csi_tools.py:
+from langchain_core.tools import tool
+from typing import Optional
+from crud.csi_crud import create_csi, read_csi, update_csi, delete_csi, bulk_delete_csi
+
+@tool
+def read_csi_tool(csi_id: Optional[str] = None, sold_to_name: Optional[str] = None) -> str:
+    """Read CSI records by csi_id or partial sold_to_name."""
+    return read_csi(csi_id=csi_id, sold_to_name=sold_to_name)
+
+@tool
+def delete_csi_tool(csi_id: str) -> str:
+    """Delete a CSI record by csi_id."""
+    return delete_csi(csi_id=csi_id)
+
+@tool
+def create_csi_tool(
+    csi_id: str,
+    sold_to_code: str = "",
+    sold_to_name: str = "",
+    sold_to_address_1: str = "",
+    sold_to_address_2: str = "",
+    sold_to_address_3: str = "",
+    sold_to_address_4: str = "",
+    source_country: str = "",
+    source_country_code: str = "",
+    sourcing_cluster: str = "",
+    ship_to_code: str = "",
+    ship_to_name: str = "",
+    ship_to_address_1: str = "",
+    ship_to_address_2: str = "",
+    ship_to_address_3: str = "",
+    ship_to_address_4: str = "",
+    ship_to_country_code: str = "",
+    product_type: str = "",
+    payment_term: str = "",
+    kpi_l1: str = "",
+    kpi_l2: str = "",
+    kpi_l3: str = "",
+    bdm_name: str = "",
+    bdm_email: str = "",
+    abdm_name: str = "",
+    abdm_email: str = "",
+    customer_service_1_name: str = "",
+    customer_service_1_email: str = "",
+    customer_service_2_name: str = "",
+    customer_service_2_email: str = "",
+    customer_service_3_name: str = "",
+    customer_service_3_email: str = "",
+    customer_service_strategy: str = "",
+    consignee: str = "",
+    notify_party: str = "",
+    notify_name: str = "",
+    notify_address_1: str = "",
+    notify_address_2: str = "",
+    notify_address_3: str = "",
+    notify_address_4: str = "",
+    notify_attention_to1: str = "",
+    notify_email: str = "",
+    one_bl_per_container: str = "",
+    bl_terminal: str = "",
+    bl_container_yard: str = "",
+    bl_attention_to: str = "",
+    freight_status: str = "",
+    incoterm_code: str = "",
+    incoterm_description: str = "",
+    origin_charges: str = "",
+    freight_charges: str = "",
+    destination_charges: str = "",
+    appointed_carrier_name: str = "",
+    appointed_carrier_add1: str = "",
+    appointed_carrier_add2: str = "",
+    appointed_carrier_add3: str = "",
+    appointed_carrier_add4: str = "",
+    fcl: str = "",
+    lcl: str = "",
+    ftl: str = "",
+    order_submission_email: str = "",
+    inv_doc_email: str = "",
+    mail_comp_name: str = "",
+    mail_comp_address_1: str = "",
+    mail_comp_address_2: str = "",
+    mail_comp_add3: str = "",
+    mail_comp_add4: str = "",
+    postal_code: str = "",
+    prebooking_required: str = "",
+    delivery_time_slot: str = "",
+    delivery_days: str = "",
+    max_trips_per_day: str = "",
+    docs_needed_upon_delivery: str = "",
+    other_specify: str = "",
+    packing_instruction: str = "",
+    pallet_type_or_size: str = "",
+    specific_packing_instructions: str = "",
+    preloading_photos: str = "",
+    shipping_mark_on_pallet: str = "",
+    create_date: str = "",
+    modify_date: str = "",
+    csi_status: str = "",
+    port_of_discharge: str = "",
+    port_of_discharge_code: str = "",
+    shipment_type: str = "",
+    draft_bl_validated_by_customer: str = "",
+    ui_data_source: str = "",
+    pallet_double_stacking_of_pallets_yn: str = "",
+    pallet_length_m: Optional[float] = None,
+    pallet_width_m: Optional[float] = None,
+    pallet_height_m: Optional[float] = None,
+    pallet_double_stacking: str = ""
+) -> str:
+    """
+    Create a CSI record. 'csi_id' is the only required field. All other fields are optional and default to empty string or None.
+    """
+    row = locals()
+    return create_csi(row)
+
+@tool
+def update_csi_tool(
+    csi_id: str,
+    sold_to_code: Optional[str] = None,
+    sold_to_name: Optional[str] = None,
+    sold_to_address_1: Optional[str] = None,
+    sold_to_address_2: Optional[str] = None,
+    sold_to_address_3: Optional[str] = None,
+    sold_to_address_4: Optional[str] = None,
+    source_country: Optional[str] = None,
+    source_country_code: Optional[str] = None,
+    sourcing_cluster: Optional[str] = None,
+    ship_to_code: Optional[str] = None,
+    ship_to_name: Optional[str] = None,
+    ship_to_address_1: Optional[str] = None,
+    ship_to_address_2: Optional[str] = None,
+    ship_to_address_3: Optional[str] = None,
+    ship_to_address_4: Optional[str] = None,
+    ship_to_country_code: Optional[str] = None,
+    product_type: Optional[str] = None,
+    payment_term: Optional[str] = None,
+    kpi_l1: Optional[str] = None,
+    kpi_l2: Optional[str] = None,
+    kpi_l3: Optional[str] = None,
+    bdm_name: Optional[str] = None,
+    bdm_email: Optional[str] = None,
+    abdm_name: Optional[str] = None,
+    abdm_email: Optional[str] = None,
+    customer_service_1_name: Optional[str] = None,
+    customer_service_1_email: Optional[str] = None,
+    customer_service_2_name: Optional[str] = None,
+    customer_service_2_email: Optional[str] = None,
+    customer_service_3_name: Optional[str] = None,
+    customer_service_3_email: Optional[str] = None,
+    customer_service_strategy: Optional[str] = None,
+    consignee: Optional[str] = None,
+    notify_party: Optional[str] = None,
+    notify_name: Optional[str] = None,
+    notify_address_1: Optional[str] = None,
+    notify_address_2: Optional[str] = None,
+    notify_address_3: Optional[str] = None,
+    notify_address_4: Optional[str] = None,
+    notify_attention_to1: Optional[str] = None,
+    notify_email: Optional[str] = None,
+    one_bl_per_container: Optional[str] = None,
+    bl_terminal: Optional[str] = None,
+    bl_container_yard: Optional[str] = None,
+    bl_attention_to: Optional[str] = None,
+    freight_status: Optional[str] = None,
+    incoterm_code: Optional[str] = None,
+    incoterm_description: Optional[str] = None,
+    origin_charges: Optional[str] = None,
+    freight_charges: Optional[str] = None,
+    destination_charges: Optional[str] = None,
+    appointed_carrier_name: Optional[str] = None,
+    appointed_carrier_add1: Optional[str] = None,
+    appointed_carrier_add2: Optional[str] = None,
+    appointed_carrier_add3: Optional[str] = None,
+    appointed_carrier_add4: Optional[str] = None,
+    fcl: Optional[str] = None,
+    lcl: Optional[str] = None,
+    ftl: Optional[str] = None,
+    order_submission_email: Optional[str] = None,
+    inv_doc_email: Optional[str] = None,
+    mail_comp_name: Optional[str] = None,
+    mail_comp_address_1: Optional[str] = None,
+    mail_comp_address_2: Optional[str] = None,
+    mail_comp_add3: Optional[str] = None,
+    mail_comp_add4: Optional[str] = None,
+    postal_code: Optional[str] = None,
+    prebooking_required: Optional[str] = None,
+    delivery_time_slot: Optional[str] = None,
+    delivery_days: Optional[str] = None,
+    max_trips_per_day: Optional[str] = None,
+    docs_needed_upon_delivery: Optional[str] = None,
+    other_specify: Optional[str] = None,
+    packing_instruction: Optional[str] = None,
+    pallet_type_or_size: Optional[str] = None,
+    specific_packing_instructions: Optional[str] = None,
+    preloading_photos: Optional[str] = None,
+    shipping_mark_on_pallet: Optional[str] = None,
+    create_date: Optional[str] = None,
+    modify_date: Optional[str] = None,
+    csi_status: Optional[str] = None,
+    port_of_discharge: Optional[str] = None,
+    port_of_discharge_code: Optional[str] = None,
+    shipment_type: Optional[str] = None,
+    draft_bl_validated_by_customer: Optional[str] = None,
+    ui_data_source: Optional[str] = None,
+    pallet_double_stacking_of_pallets_yn: Optional[str] = None,
+    pallet_length_m: Optional[float] = None,
+    pallet_width_m: Optional[float] = None,
+    pallet_height_m: Optional[float] = None,
+    pallet_double_stacking: Optional[str] = None
+) -> str:
+    """
+    Update a CSI record. Provide csi_id and any fields to update (all are optional except csi_id).
+    """
+    updates = {k: v for k, v in locals().items() if k != "csi_id" and v is not None}
+    return update_csi(csi_id, updates)
+
+
+@tool
+def bulk_delete_csi_tool(
+    csi_id: Optional[str] = None,
+    sold_to_code: Optional[str] = None,
+    sold_to_name: Optional[str] = None,
+    sold_to_address_1: Optional[str] = None,
+    sold_to_address_2: Optional[str] = None,
+    sold_to_address_3: Optional[str] = None,
+    sold_to_address_4: Optional[str] = None,
+    source_country: Optional[str] = None,
+    source_country_code: Optional[str] = None,
+    sourcing_cluster: Optional[str] = None,
+    ship_to_code: Optional[str] = None,
+    ship_to_name: Optional[str] = None,
+    ship_to_address_1: Optional[str] = None,
+    ship_to_address_2: Optional[str] = None,
+    ship_to_address_3: Optional[str] = None,
+    ship_to_address_4: Optional[str] = None,
+    ship_to_country_code: Optional[str] = None,
+    product_type: Optional[str] = None,
+    payment_term: Optional[str] = None,
+    kpi_l1: Optional[str] = None,
+    kpi_l2: Optional[str] = None,
+    kpi_l3: Optional[str] = None,
+    bdm_name: Optional[str] = None,
+    bdm_email: Optional[str] = None,
+    abdm_name: Optional[str] = None,
+    abdm_email: Optional[str] = None,
+    customer_service_1_name: Optional[str] = None,
+    customer_service_1_email: Optional[str] = None,
+    customer_service_2_name: Optional[str] = None,
+    customer_service_2_email: Optional[str] = None,
+    customer_service_3_name: Optional[str] = None,
+    customer_service_3_email: Optional[str] = None,
+    customer_service_strategy: Optional[str] = None,
+    consignee: Optional[str] = None,
+    notify_party: Optional[str] = None,
+    notify_name: Optional[str] = None,
+    notify_address_1: Optional[str] = None,
+    notify_address_2: Optional[str] = None,
+    notify_address_3: Optional[str] = None,
+    notify_address_4: Optional[str] = None,
+    notify_attention_to1: Optional[str] = None,
+    notify_email: Optional[str] = None,
+    one_bl_per_container: Optional[str] = None,
+    bl_terminal: Optional[str] = None,
+    bl_container_yard: Optional[str] = None,
+    bl_attention_to: Optional[str] = None,
+    freight_status: Optional[str] = None,
+    incoterm_code: Optional[str] = None,
+    incoterm_description: Optional[str] = None,
+    origin_charges: Optional[str] = None,
+    freight_charges: Optional[str] = None,
+    destination_charges: Optional[str] = None,
+    appointed_carrier_name: Optional[str] = None,
+    appointed_carrier_add1: Optional[str] = None,
+    appointed_carrier_add2: Optional[str] = None,
+    appointed_carrier_add3: Optional[str] = None,
+    appointed_carrier_add4: Optional[str] = None,
+    fcl: Optional[str] = None,
+    lcl: Optional[str] = None,
+    ftl: Optional[str] = None,
+    order_submission_email: Optional[str] = None,
+    inv_doc_email: Optional[str] = None,
+    mail_comp_name: Optional[str] = None,
+    mail_comp_address_1: Optional[str] = None,
+    mail_comp_address_2: Optional[str] = None,
+    mail_comp_add3: Optional[str] = None,
+    mail_comp_add4: Optional[str] = None,
+    postal_code: Optional[str] = None,
+    prebooking_required: Optional[str] = None,
+    delivery_time_slot: Optional[str] = None,
+    delivery_days: Optional[str] = None,
+    max_trips_per_day: Optional[str] = None,
+    docs_needed_upon_delivery: Optional[str] = None,
+    other_specify: Optional[str] = None,
+    packing_instruction: Optional[str] = None,
+    pallet_type_or_size: Optional[str] = None,
+    specific_packing_instructions: Optional[str] = None,
+    preloading_photos: Optional[str] = None,
+    shipping_mark_on_pallet: Optional[str] = None,
+    create_date: Optional[str] = None,
+    modify_date: Optional[str] = None,
+    csi_status: Optional[str] = None,
+    port_of_discharge: Optional[str] = None,
+    port_of_discharge_code: Optional[str] = None,
+    shipment_type: Optional[str] = None,
+    draft_bl_validated_by_customer: Optional[str] = None,
+    ui_data_source: Optional[str] = None,
+    pallet_double_stacking_of_pallets_yn: Optional[str] = None,
+    pallet_length_m: Optional[float] = None,
+    pallet_width_m: Optional[float] = None,
+    pallet_height_m: Optional[float] = None,
+    pallet_double_stacking: Optional[str] = None
+) -> str:
+    """
+    Bulk delete CSI records by criteria. All keys must match columns. Numeric fields should be numbers or null.
+    """
+    criteria = {k: v for k, v in locals().items() if v is not None}
+    return bulk_delete_csi(**criteria)
+
+
+main.py:
+# main.py
+
+import os
+from dotenv import load_dotenv
+from typing import List, Dict, Any
+from langchain_openai import ChatOpenAI
+from langgraph.graph import StateGraph, END
+from langgraph.prebuilt import create_react_agent
+from langchain_core.runnables import Runnable
+from langchain_core.messages import BaseMessage
+from tools.csi_tools import (
+    create_csi_tool,
+    read_csi_tool,
+    update_csi_tool,
+    delete_csi_tool,
+    bulk_delete_csi_tool
+)   
+
+load_dotenv()
+
+class AgentState(dict):
+    messages: List[dict]
+
+llm = ChatOpenAI(
+    model="gpt-4o",
+    temperature=0,
+)
+
+tools = [
+    create_csi_tool,
+    read_csi_tool,
+    update_csi_tool,
+    delete_csi_tool,
+    bulk_delete_csi_tool,
+]
+agent = create_react_agent(llm, tools)
+react_agent: Runnable = agent.with_config({"run_name": "ReActAgent"})
+
+graph = StateGraph(AgentState)
+graph.add_node("agent", react_agent)
+graph.set_entry_point("agent")
+graph.add_edge("agent", END)
+app = graph.compile()
+
+def process_messages(messages: List[Dict[str, Any]], session_id: str = None) -> Dict[str, Any]:
+    """
+    Stateless: Given a list of messages and a session_id, returns the next assistant message.
+    """
+    # If you want to use session_id for logging or tool context, you can pass it here.
+    result = app.invoke({"messages": messages})
+    assistant_message = result["messages"][-1]
+    if not isinstance(assistant_message, dict):
+        assistant_message = assistant_message.model_dump()
+    return assistant_message
+
+
+server.py:
+
+
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Dict, List, Any
+from main import process_messages
+import datetime
+import json
+import re
+
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Change for production!
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+class ChatRequest(BaseModel):
+    session_id: str
+    message: str
+
+class ChatSimpleResponse(BaseModel):
+    message: str
+    data: List[Dict[str, Any]]
+
+# In-memory session store (volatile; resets when the app restarts)
+session_histories: Dict[str, List[Dict[str, str]]] = {}
+
+SYSTEM_PROMPT = {
+  "role": "system",
+  "content": """
+You are a helpful, conversational assistant that performs CRUD (Create, Read, Update, Delete) operations on a PostgreSQL table called 'csi' containing customer shipment information.
+
+### SAFE BEHAVIOR RULES
+
+- **DELETE**: Always perform a SELECT to verify the record exists before attempting deletion. If not found, respond that no matching record was found and no deletion was performed.
+- **INSERT**: For inserting, if the user provides `csi_id` (the only mandatory field), you must proceed to create the record even if other fields are missing. Populate all other fields with empty string or null. First, check if a record with the same `csi_id` exists—if it does, skip insert and respond that the record already exists.
+- **UPDATE**: Only proceed if the `csi_id` exists. Otherwise, return a message that the record was not found.
+If any tool breaks or some random error is encountered, respond with a generic error message in the mentioned format itself and do not expose internal details.
+
+### IF USER ASKS FOR AN ACTION WITHOUT PASSING DATA
+
+If the user asks for help with an operation (e.g., “Can you insert something?” or “I want to delete a record”) but does not provide data:
+- DO NOT respond with errors like “missing data.”
+- DO respond positively and guide them by:
+  - Acknowledging the request.
+  - Asking for the required data.
+  - Providing a detailed **markdown-formatted table** of all the fields the user can include.
+
+### RESPONSE FORMAT
+
+All your responses MUST follow this strict JSON format:
+
+{
+  "message": "<human-readable explanation>",
+  "data": []
+}
+
+- **message**: Clearly explain what action was done or what’s needed.
+- **data**:
+  - For SELECT: return in the form of json for each row fetched. 
+  - For CREATE/UPDATE/DELETE: return in the form of json for each row fetched. 
+  - If no data is returned, use `[]`.
+
+---
+
+### TABLE SCHEMA: `public.csi`
+
+```markdown
+| Column Name                          | Type     | Nullable |
+|-------------------------------------|----------|----------|
+| csi_id                              | text     | NO       |
+| sold_to_code                        | text     | YES      |
+| sold_to_name                        | text     | YES      |
+| sold_to_address_1                   | text     | YES      |
+| sold_to_address_2                   | text     | YES      |
+| sold_to_address_3                   | text     | YES      |
+| sold_to_address_4                   | text     | YES      |
+| source_country                      | text     | YES      |
+| source_country_code                 | text     | YES      |
+| sourcing_cluster                    | text     | YES      |
+| ship_to_code                        | text     | YES      |
+| ship_to_name                        | text     | YES      |
+| ship_to_address_1                   | text     | YES      |
+| ship_to_address_2                   | text     | YES      |
+| ship_to_address_3                   | text     | YES      |
+| ship_to_address_4                   | text     | YES      |
+| ship_to_country_code                | text     | YES      |
+| product_type                        | text     | YES      |
+| payment_term                        | text     | YES      |
+| kpi_l1                              | text     | YES      |
+| kpi_l2                              | text     | YES      |
+| kpi_l3                              | text     | YES      |
+| bdm_name                            | text     | YES      |
+| bdm_email                           | text     | YES      |
+| abdm_name                           | text     | YES      |
+| abdm_email                          | text     | YES      |
+| customer_service_1_name            | text     | YES      |
+| customer_service_1_email           | text     | YES      |
+| customer_service_2_name            | text     | YES      |
+| customer_service_2_email           | text     | YES      |
+| customer_service_3_name            | text     | YES      |
+| customer_service_3_email           | text     | YES      |
+| customer_service_strategy          | text     | YES      |
+| consignee                           | text     | YES      |
+| notify_party                        | text     | YES      |
+| notify_name                         | text     | YES      |
+| notify_address_1                    | text     | YES      |
+| notify_address_2                    | text     | YES      |
+| notify_address_3                    | text     | YES      |
+| notify_address_4                    | text     | YES      |
+| notify_attention_to1               | text     | YES      |
+| notify_email                        | text     | YES      |
+| one_bl_per_container               | text     | YES      |
+| bl_terminal                         | text     | YES      |
+| bl_container_yard                   | text     | YES      |
+| bl_attention_to                     | text     | YES      |
+| freight_status                      | text     | YES      |
+| incoterm_code                       | text     | YES      |
+| incoterm_description                | text     | YES      |
+| origin_charges                      | text     | YES      |
+| freight_charges                     | text     | YES      |
+| destination_charges                | text     | YES      |
+| appointed_carrier_name             | text     | YES      |
+| appointed_carrier_add1             | text     | YES      |
+| appointed_carrier_add2             | text     | YES      |
+| appointed_carrier_add3             | text     | YES      |
+| appointed_carrier_add4             | text     | YES      |
+| fcl                                 | text     | YES      |
+| lcl                                 | text     | YES      |
+| ftl                                 | text     | YES      |
+| order_submission_email             | text     | YES      |
+| inv_doc_email                       | text     | YES      |
+| mail_comp_name                      | text     | YES      |
+| mail_comp_address_1                | text     | YES      |
+| mail_comp_address_2                | text     | YES      |
+| mail_comp_add3                      | text     | YES      |
+| mail_comp_add4                      | text     | YES      |
+| postal_code                         | text     | YES      |
+| prebooking_required                | text     | YES      |
+| delivery_time_slot                 | text     | YES      |
+| delivery_days                       | text     | YES      |
+| max_trips_per_day                  | text     | YES      |
+| docs_needed_upon_delivery         | text     | YES      |
+| other_specify                       | text     | YES      |
+| packing_instruction                | text     | YES      |
+| pallet_type_or_size               | text     | YES      |
+| specific_packing_instructions     | text     | YES      |
+| preloading_photos                  | text     | YES      |
+| shipping_mark_on_pallet           | text     | YES      |
+| create_date                         | text     | YES      |
+| modify_date                         | text     | YES      |
+| csi_status                          | text     | YES      |
+| port_of_discharge                  | text     | YES      |
+| port_of_discharge_code            | text     | YES      |
+| shipment_type                      | text     | YES      |
+| draft_bl_validated_by_customer    | text     | YES      |
+| ui_data_source                      | text     | YES      |
+| pallet_double_stacking_of_pallets_yn | text  | YES      |
+| pallet_length_m                     | numeric  | YES      |
+| pallet_width_m                      | numeric  | YES      |
+| pallet_height_m                     | numeric  | YES      |
+| pallet_double_stacking             | text     | YES      |
+
+
+Response Format:
+    class ChatSimpleResponse(BaseModel):
+      message: str
+      data: List[Dict[str, Any]] 
+keep this in mind always when responding to the user as this validation is done before sending back the response.
+
+If a user does not provides any non mandatory fields, you must still create the record with empty data type as mentioned in the schema, for numeric put null if possible or zero.
+You can suggest fields from this schema when asking the user for input.
+Always guide them with a clear message and a field table they can use as a reference.
+"""
+}
+
+def log(msg: str):
+    print(f"[{datetime.datetime.now().isoformat()}] {msg}")
+
+@app.post("/chat", response_model=ChatSimpleResponse)
+async def chat_endpoint(req: ChatRequest):
+    process_id = f"{req.session_id}-{datetime.datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+    log(f"=== PROCESS START [{process_id}] ===")
+    try:
+        # Load or initialize session history
+        chat_history = session_histories.get(req.session_id, [])
+
+        log(f"[{process_id}] Loaded {len(chat_history)} messages for session '{req.session_id}'")
+
+        if not chat_history:
+            log(f"[{process_id}] No history found, injecting system prompt.")
+            chat_history.append(SYSTEM_PROMPT)
+
+        # Append the new user message
+        log(f"[{process_id}] Appending user message: {req.message}")
+        chat_history.append({"role": "user", "content": req.message})
+
+        # Process message
+        log(f"[{process_id}] Calling LangGraph process_messages()")
+        assistant_message = process_messages(chat_history, session_id=req.session_id)
+        log(f"[{process_id}] Assistant response: {assistant_message.get('content', '')}")
+        chat_history.append(assistant_message)
+        session_histories[req.session_id] = chat_history
+        log(f"[{process_id}] Updated session memory to {len(chat_history)} messages")
+
+        log(f"=== PROCESS END [{process_id}] ===\n")
+        raw = assistant_message["content"]
+
+        # Remove code block markers if present
+        raw = re.sub(r"^```(?:json)?|```$", "", raw.strip(), flags=re.MULTILINE).strip()
+
+        # Try to extract a JSON object from anywhere in the string
+        json_match = re.search(r"(\{[\s\S]*\})", raw)
+        if json_match:
+            json_str = json_match.group(1)
+        else:
+            json_str = raw
+
+        try:
+            res_json = json.loads(json_str)
+        except Exception:
+            # fallback: just put the whole thing in message, empty data
+            res_json = {"message": raw, "data": []}
+
+        # Ensure 'data' is a list
+        data = res_json.get("data", [])
+        if isinstance(data, str):
+            try:
+                data = json.loads(data)
+            except Exception:
+                data = []
+        if not isinstance(data, list):
+            data = [data]  # fallback: wrap in list
+
+        message = res_json.get("message", "")
+        return ChatSimpleResponse(message=message, data=data)
+
+    except Exception as e:
+        log(f"=== PROCESS ERROR [{process_id}] === {e}\n")
+        raise HTTPException(status_code=500, detail=str(e))
