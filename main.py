@@ -10,14 +10,20 @@ from langchain_core.runnables import Runnable
 from langchain_core.messages import BaseMessage
 from tools.csi_tools import (
     create_csi_tool,
-    read_csi_tool,
-    # update_csi_tool,
-    # delete_csi_tool,
-)   
+    read_cases_tool,
+    update_csi_tool,
+    delete_csi_tool,
+)
+
+from tools.render_components_tool import (
+    render_create_form_tool,
+    render_update_form_tool,
+    render_delete_confirmation_tool,
+)
 
 load_dotenv()
 
-class AgentState(dict):
+class CasesAgentState(dict):
     messages: List[dict]
 
 llm = ChatOpenAI(
@@ -27,98 +33,46 @@ llm = ChatOpenAI(
 
 tools = [
     create_csi_tool,
-    read_csi_tool,
-    # update_csi_tool,
-    # delete_csi_tool,
+    read_cases_tool,
+    update_csi_tool,
+    delete_csi_tool,
 ]
-agent = create_react_agent(llm, tools)
-react_agent: Runnable = agent.with_config({"run_name": "ReActAgent"})
 
-graph = StateGraph(AgentState)
-graph.add_node("agent", react_agent)
-graph.set_entry_point("agent")
+form_tools_agent = create_react_agent(llm, [
+    render_create_form_tool,
+    render_update_form_tool,
+    render_delete_confirmation_tool,
+])
+form_tools_react_agent: Runnable = form_tools_agent.with_config({"run_name": "FormToolsAgent"})
+cases_agent = create_react_agent(llm, tools)
+cases_react_agent: Runnable = cases_agent.with_config({"run_name": "ReActAgent"})
+
+
+graph = StateGraph(CasesAgentState)
+graph.add_node("form_tools", form_tools_react_agent)
+graph.add_node("agent", cases_react_agent)
+graph.set_entry_point("form_tools")  # Start with intent extraction and form rendering
+graph.add_edge("form_tools", "agent")
 graph.add_edge("agent", END)
 app = graph.compile()
 # import logging
 
 # # Configure logging
 # logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-def process_messages(messages: List[Dict[str, Any]], session_id: str = None, system_prompt: str = None) -> Dict[str, Any]:
-    # logging.debug("process_messages called with messages: %s", messages)
-    # logging.debug("Session ID: %s, System Prompt: %s", session_id, system_prompt)
+def process_messages(
+    messages: List[Dict[str, Any]],
+    session_id: str = None
+) -> Dict[str, Any]:
     try:
-        result = app.invoke({"messages": messages, "system_prompt": system_prompt})
+        result = app.invoke({"messages": messages})
+        # print("Agent final Result:", result)
+
         assistant_message = result["messages"][-1]
-        # logging.debug("Assistant message: %s", assistant_message)
+
         if not isinstance(assistant_message, dict):
             assistant_message = assistant_message.model_dump()
+
         return assistant_message
+
     except Exception as e:
-        # logging.error("Error in process_messages: %s", e)
         raise
-
-
-
-# Complete Sample Output:
-
-# {
-#   "response": "The new user \"Ronit\" with email \"tauhid@gmail.com\" has been successfully added to the table. The user ID is 12.",
-#   "history": [
-#     {
-#       "role": "system",
-#       "content": "You are a helpful assistant who performs CRUD operations on a PostgreSQL database of users.\n    Here is the table schema:\n\n    Table \"public.users\"\n    Column |          Type          | Collation | Nullable |              Default              \n    --------+------------------------+-----------+----------+-----------------------------------\n    id     | integer                |           | not null | nextval('users_id_seq'::regclass)\n    name   | character varying(100) |           | not null | \n    email  | character varying(150) |           | not null | \n\n    Indexes:\n        \"users_pkey\" PRIMARY KEY, btree (id)\n        \"users_email_key\" UNIQUE CONSTRAINT, btree (email)\n    "
-#     },
-#     {
-#       "role": "user",
-#       "content": "add a new user in the table with the name Ronit and gmail tauhid@gmail.com"
-#     },
-#     {
-#       "content": "The new user \"Ronit\" with email \"tauhid@gmail.com\" has been successfully added to the table. The user ID is 12.",
-#       "additional_kwargs": {
-#         "refusal": null
-#       },
-#       "response_metadata": {
-#         "token_usage": {
-#           "completion_tokens": 32,
-#           "prompt_tokens": 355,
-#           "total_tokens": 387,
-#           "completion_tokens_details": {
-#             "accepted_prediction_tokens": 0,
-#             "audio_tokens": 0,
-#             "reasoning_tokens": 0,
-#             "rejected_prediction_tokens": 0
-#           },
-#           "prompt_tokens_details": {
-#             "audio_tokens": 0,
-#             "cached_tokens": 0
-#           }
-#         },
-#         "model_name": "gpt-4-0613",
-#         "system_fingerprint": null,
-#         "id": "chatcmpl-BpW5QK0BnMkAj1nMwcXJnsUABcSyl",
-#         "service_tier": "default",
-#         "finish_reason": "stop",
-#         "logprobs": null
-#       },
-#       "type": "ai",
-#       "name": null,
-#       "id": "run--871258ae-c830-45fc-91eb-44e569112db5-0",
-#       "example": false,
-#       "tool_calls": [],
-#       "invalid_tool_calls": [],
-#       "usage_metadata": {
-#         "input_tokens": 355,
-#         "output_tokens": 32,
-#         "total_tokens": 387,
-#         "input_token_details": {
-#           "audio": 0,
-#           "cache_read": 0
-#         },
-#         "output_token_details": {
-#           "audio": 0,
-#           "reasoning": 0
-#         }
-#       }
-#     }
-#   ]
-# }

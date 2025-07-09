@@ -1,41 +1,33 @@
 from langchain_core.tools import tool
-from typing import Optional
-from crud.csi_crud import create_csi, read_csi, update_csi, delete_csi
-from pydantic import ValidationError,BaseModel
+from crud.cases_crud import create_csi, read_cases, update_csi, delete_csi
+from pydantic import ValidationError
+from tools.cases_args import CSIToolArgs
 import logging
 
-@tool
-def read_csi_tool(id: Optional[str] = None, sold_to_comp_name: Optional[str] = None) -> str:
-    """
-    Read CSI records by id (string, unique record id) or by partial sold_to_comp_name.
-    """
-    print(f"[READ TOOL] Called with id={id}, sold_to_comp_name={sold_to_comp_name}")
-    return read_csi(id=id, sold_to_comp_name=sold_to_comp_name)
 
 @tool
-def delete_csi_tool(id: str) -> str:
-    """Delete a CSI record by id."""
-    print(f"[DELETE TOOL] Called with id={id}")
-    return delete_csi(id=id)
+def read_cases_tool(inputs: CSIToolArgs) -> str:
+    """
+    Reads CSI records based on filter parameters such as id, csi_id, sold_to_comp_name, etc.
+    Supports pagination using `offset` and `page`.
+    Returns a summary message and up to 5 matching records.
+    """
+    data = {k: v for k, v in inputs.model_dump().items() if v not in ("", None)}
+    print(f"[CSI READ TOOL] Called with inputs={data}")
+    result = read_cases(**data)
+    print(f"[CSI READ TOOL] Result: {result}")
+    return result
+read_cases_tool.name = "csi_read_tool"
 
-class CSIToolArgs(BaseModel):
-    sold_to_code: Optional[str] = ""
-    sold_to_comp_name: Optional[str] = ""
-    # Add other fields as needed
 
 @tool
 def create_csi_tool(inputs: CSIToolArgs) -> str:
     """
-    Create a CSI record. Accepts any fields from the schema except '_id'.
+    Creates a new CSI record using the provided data (excluding '_id').
     """
-    logging.debug("create_csi_tool called with inputs: %s", inputs)
     try:
-        # Convert inputs to a dictionary
         data = inputs.model_dump()
-
-        # Call the create function
         result = create_csi(**data)
-        logging.debug("create_csi result: %s", result)
         return result
     except ValidationError as e:
         logging.error("Validation error in create_csi_tool: %s", e)
@@ -43,3 +35,29 @@ def create_csi_tool(inputs: CSIToolArgs) -> str:
     except Exception as e:
         logging.error("Error in create_csi_tool: %s", e)
         return "[CREATE ERROR] An unexpected error occurred."
+create_csi_tool.name = "csi_create_tool"
+
+
+@tool
+def update_csi_tool(inputs: CSIToolArgs) -> str:
+    """
+    Updates a CSI record. Requires `csi_id` along with the fields to update.
+    """
+    data = inputs.model_dump()
+    csi_id = data.get("csi_id")
+    if not csi_id:
+        return {"message": "csi_id is required for update.", "data": []}
+    result = update_csi(csi_id, **data)
+    return result
+update_csi_tool.name = "csi_update_tool"
+
+
+@tool
+def delete_csi_tool(inputs: CSIToolArgs) -> str:
+    """
+    Deletes a CSI record using the provided filter criteria.
+    """
+    data = inputs.model_dump()
+    result = delete_csi(**data)
+    return result
+delete_csi_tool.name = "csi_delete_tool"

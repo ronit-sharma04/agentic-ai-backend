@@ -1,20 +1,27 @@
-import logging
-from crud.csi_crud import create_csi
+from pprint import pprint
+from crud.cases_crud import read_csi  # Replace with the correct path or module name
 
-# Configure logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+# Example 1: Basic read with no filters
+print("=== Test 1: Basic call ===")
+response = read_csi(page=5, sold_to_comp_name="AL GURG UNILEVER (LLC)")  # No filters, just pagination
+pprint(response)
 
-def test_create_csi():
-    # Example data
-    csi_data = {
-        "id": "ronit",  # Ensure this is unique or adjust as needed
-        "sold_to_code": "example_code"
-    }
+# Example 2: Pagination - page 2
+# print("\n=== Test 2: Pagination (page 2) ===")
+# response = read_csi(offset=5, page=2)
+# pprint(response)
 
-    # Call the create_csi function
-    logging.info("Attempting to create CSI record with data: %s", csi_data)
-    result = create_csi(**csi_data)
-    logging.info("Result: %s", result)
+# # Example 3: Filter by string field
+# print("\n=== Test 3: Filter by string field ===")
+# response = read_csi(name="Alice")  # Replace 'name' with an actual field in your collection
+# pprint(response)
 
-if __name__ == "__main__":
-    test_create_csi()
+# # Example 4: Filter by ObjectId
+# print("\n=== Test 4: Filter by ObjectId ===")
+# response = read_csi(_id="64a7db9ee1c2a0e0d4a01234")  # Use a real ObjectId from your DB
+# pprint(response)
+
+# Example 5: Invalid ObjectId
+# print("\n=== Test 5: Invalid ObjectId ===")
+# response = read_csi(_id="not-a-valid-id")
+# pprint(response)
