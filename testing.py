@@ -1,10 +1,24 @@
 from pprint import pprint
-from crud.cases_crud import read_csi  # Replace with the correct path or module name
+from crud.cases_crud import read_cases,create_cases  # Replace with the correct path or module name
 
 # Example 1: Basic read with no filters
-print("=== Test 1: Basic call ===")
-response = read_csi(page=5, sold_to_comp_name="AL GURG UNILEVER (LLC)")  # No filters, just pagination
+from crud.cases_crud import read_cases  # Update path if needed
+from pprint import pprint
+
+print("=== Test 1: Basic call with multiple filters ===")
+
+response = create_cases(
+    page=1,
+    sold_to_code="99000123",
+    sold_to_comp_name="EXAMPLE TRADING CO. LTD.",
+    sold_to_comp_add1="123 EXAMPLE STREET, BLOCK A, INDUSTRIAL ZONE",
+    sold_to_comp_add2="EXAMPLIA CITY",
+    sold_to_comp_add3="",  # This will be ignored by your read_cases logic
+    sold_to_comp_add4="FANTASYLAND"
+)
+
 pprint(response)
+
 
 # Example 2: Pagination - page 2
 # print("\n=== Test 2: Pagination (page 2) ===")

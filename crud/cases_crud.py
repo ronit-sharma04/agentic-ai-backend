@@ -2,7 +2,7 @@ from db.connection import get_db_connection
 from pymongo.errors import PyMongoError, DuplicateKeyError
 from bson import ObjectId
 import re
-
+import random
 COLLECTION = "cases"
 from bson import ObjectId
 
@@ -33,49 +33,71 @@ def read_cases(page: int = 1, **kwargs) -> dict:
         total_count = coll.count_documents(query)
         print(f"[READ] Total matching docs: {total_count}")
         if total_count == 0:
-            return {"message": "No CSI records found.", "data": []}
+            return {"message": "No CSI Cases found.", "data": []}
 
         limit = 5
         offset = (page - 1) * limit
 
         docs = list(coll.find(query, {"_id": 0}).skip(offset).limit(limit))
 
-        message = f"{total_count} records found. Showing page {page} with {len(docs)} records."
+        message = f"{total_count} Cases found. Showing page {page} with {len(docs)} Cases."
         return {"message": message, "data": docs}
 
     except PyMongoError:
-        return {"message": "An unexpected error occurred while fetching the records.", "data": []}
+        return {"message": "An unexpected error occurred while fetching the Cases.", "data": []}
     except Exception:
         return {"message": "An unexpected error occurred during the operation.", "data": []}
     
-def create_csi(**kwargs) -> str:
+
+def create_cases(**kwargs) -> dict:
     print("[CREATE] Called with kwargs:", kwargs)
     try:
         db = get_db_connection(COLLECTION)
         print("[CREATE] Got DB connection")
         coll = db[COLLECTION]
 
-        # Generate a new ObjectId
-        _id = ObjectId()
-        kwargs["_id"] = _id
+        # Add default fields
+        case_id = f"csi-case-{random.randint(100000, 999999)}"
+        kwargs["case_id"] = case_id
+        kwargs["csi_status"] = "pending"
 
         # Prepare document
         doc = dict(kwargs)
         print("[CREATE] Document to insert:", doc)
 
-        # Insert document
+        # Insert document (MongoDB auto-generates _id)
         result = coll.insert_one(doc)
         print(f"[CREATE] Inserted with _id: {result.inserted_id}")
-        return f"CSI row created with _id: {_id}"
+
+        # Retrieve the inserted document (excluding Mongo _id)
+        inserted_doc = coll.find_one({"_id": result.inserted_id}, {"_id": 0})
+
+        return {
+            "message": f"Case opened successfully with ID: {case_id}",
+            "case_id": case_id,
+            "data": inserted_doc
+        }
+
     except DuplicateKeyError:
-        print("[CREATE] DuplicateKeyError: Record with this _id already exists.")
-        return '[CREATE ERROR] Record with this _id already exists.'
+        print("[CREATE] DuplicateKeyError: Case with this case_id already exists.")
+        return {
+            "error": True,
+            "message": "Case with this case_id already exists."
+        }
     except PyMongoError as e:
         print("[CREATE ERROR] PyMongoError occurred:", e)
-        return "[CREATE ERROR] An unexpected error occurred while creating the record."
+        return {
+            "error": True,
+            "message": "An unexpected error occurred while creating the Case."
+        }
     except Exception as e:
         print("[CREATE ERROR] Generic error:", e)
-        return "[CREATE ERROR] An unexpected error occurred during the operation."
+        return {
+            "error": True,
+            "message": "An unexpected error occurred during the operation."
+        }
+
+
 
 # ...existing code...
 
@@ -86,18 +108,18 @@ def update_csi(csi_id: str, **kwargs) -> dict:
         coll = db[COLLECTION]
         # Remove csi_id from kwargs if present
         kwargs.pop("csi_id", None)
-        # Check if record exists
+        # Check if Case exists
         existing = coll.find_one({"csi_id": csi_id})
         if not existing:
-            return {"message": "Record not found. Update not performed.", "data": []}
+            return {"message": "Case not found. Update not performed.", "data": []}
         # Perform update
         result = coll.update_one({"csi_id": csi_id}, {"$set": kwargs})
         if result.modified_count > 0:
-            return {"message": "Record updated successfully.", "data": []}
+            return {"message": "Case updated successfully.", "data": []}
         else:
-            return {"message": "No changes made to the record.", "data": []}
+            return {"message": "No changes made to the Case.", "data": []}
     except PyMongoError:
-        return {"message": "An unexpected error occurred while updating the record.", "data": []}
+        return {"message": "An unexpected error occurred while updating the Case.", "data": []}
     except Exception:
         return {"message": "An unexpected error occurred during the operation.", "data": []}
 
@@ -120,15 +142,15 @@ def delete_csi(**kwargs) -> dict:
         # Pre-check
         found = coll.find_one(query)
         if not found:
-            return {"message": "No matching record found. Deletion not performed.", "data": []}
+            return {"message": "No matching Case found. Deletion not performed.", "data": []}
         # Delete
         result = coll.delete_one(query)
         if result.deleted_count > 0:
-            return {"message": "Record deleted successfully.", "data": []}
+            return {"message": "Case deleted successfully.", "data": []}
         else:
             return {"message": "Deletion failed.", "data": []}
     except PyMongoError:
-        return {"message": "An unexpected error occurred while deleting the record.", "data": []}
+        return {"message": "An unexpected error occurred while deleting the Case.", "data": []}
     except Exception:
         return {"message": "An unexpected error occurred during the operation.", "data": []}
 

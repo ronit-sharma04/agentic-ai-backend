@@ -150,3 +150,6 @@ class CSIToolArgs(BaseModel):
     modify_date: Optional[str] = ""
     csi_status: Optional[str] = ""
     page: Optional[int] = 1
+    customer_name: Optional[str] = ""
+    customer_email: Optional[str] = ""
+
