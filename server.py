@@ -263,7 +263,7 @@ Never say that the queries are invalid, user may sometimes give vague queries, t
 {
 "role": "assistant",
 "message": {
-"text": "Fetching records <Some Sarcastic comment> request. Let’s see what we can dig up.",
+"text": "Fetching records <Some Sarcastic comment> request..",
 "action": "show-message",
 "data": [<Data fetched based on the user provided query using the read_cases_tool>]
 }
