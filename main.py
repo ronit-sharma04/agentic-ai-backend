@@ -9,11 +9,12 @@ from langgraph.prebuilt import create_react_agent
 from langchain_core.runnables import Runnable
 from langchain_core.messages import BaseMessage
 from tools.csi_tools import (
-    create_csi_tool,
+    create_cases_tool,
     read_cases_tool,
-    update_csi_tool,
-    delete_csi_tool,
 )
+from langchain_core.output_parsers import JsonOutputKeyToolsParser
+from pydantic import BaseModel
+from typing import Literal, Optional
 
 
 load_dotenv()
@@ -21,19 +22,26 @@ load_dotenv()
 class CasesAgentState(dict):
     messages: List[dict]
 
+class ChatSimpleMessage(BaseModel):
+    text: str
+    action: Literal["show-message", "render-create-csi-form", "render-update-csi-form"]
+    data: Optional[List[Dict[str, Any]]] = []
+
+class ChatSimpleResponse(BaseModel):
+    role: Literal["assistant"]
+    message: ChatSimpleMessage
+
 llm = ChatOpenAI(
     model="gpt-4o",
     temperature=0,
 )
-
 tools = [
-    create_csi_tool,
+    create_cases_tool,
     read_cases_tool,
-    update_csi_tool,
-    delete_csi_tool,
 ]
 
 cases_agent = create_react_agent(llm, tools)
+
 cases_react_agent: Runnable = cases_agent.with_config({"run_name": "ReActAgent"})
 
 

@@ -67,7 +67,7 @@ read_cases_tool.name = "csi_read_tool"
 
 
 @tool
-def create_csi_tool(inputs: CSIToolArgs) -> str:
+def create_cases_tool(inputs: CSIToolArgs) -> str:
     """
     Create a new CSI (Customer Shipment Instruction) record in the database using provided input fields.
 
@@ -133,26 +133,26 @@ def create_csi_tool(inputs: CSIToolArgs) -> str:
 
 
 
-@tool
-def update_csi_tool(inputs: CSIToolArgs) -> str:
-    """
-    Updates a CSI record. Requires `csi_id` along with the fields to update.
-    """
-    data = inputs.model_dump()
-    csi_id = data.get("csi_id")
-    if not csi_id:
-        return {"message": "csi_id is required for update.", "data": []}
-    result = update_csi(csi_id, **data)
-    return result
-update_csi_tool.name = "csi_update_tool"
+# @tool
+# def update_csi_tool(inputs: CSIToolArgs) -> str:
+#     """
+#     Updates a CSI record. Requires `csi_id` along with the fields to update.
+#     """
+#     data = inputs.model_dump()
+#     csi_id = data.get("csi_id")
+#     if not csi_id:
+#         return {"message": "csi_id is required for update.", "data": []}
+#     result = update_csi(csi_id, **data)
+#     return result
+# update_csi_tool.name = "csi_update_tool"
 
 
-@tool
-def delete_csi_tool(inputs: CSIToolArgs) -> str:
-    """
-    Deletes a CSI record using the provided filter criteria.
-    """
-    data = inputs.model_dump()
-    result = delete_csi(**data)
-    return result
-delete_csi_tool.name = "csi_delete_tool"
+# @tool
+# def delete_csi_tool(inputs: CSIToolArgs) -> str:
+#     """
+#     Deletes a CSI record using the provided filter criteria.
+#     """
+#     data = inputs.model_dump()
+#     result = delete_csi(**data)
+#     return result
+# delete_csi_tool.name = "csi_delete_tool"
