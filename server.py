@@ -516,71 +516,376 @@ async def chat_endpoint(req: ChatRequest):
 def get_form_fields():
     form_fields = {
   "Customer Information": [
-    {"field": "Email Address", "editable": "true", "data_type": "string"},
-    {"field": "Attention To", "editable": "true", "data_type": "string"},
-    {"field": "Tax Identification Number", "editable": "true", "data_type": "string"},
-    {"field": "Sourcing Country", "editable": "true", "data_type": "enum", "options": ["USA", "India", "China", "Germany", "Brazil"]},
-    {"field": "UAPL Sold-To Code", "editable": "false", "data_type": "string"},
-    {"field": "Sourcing Cluster", "editable": "false", "data_type": "string"},
-    {"field": "UAPL Ship-To Code", "editable": "false", "data_type": "string"},
-    {"field": "Payment Term", "editable": "false", "data_type": "string"},
-    {"field": "Customer Segment", "editable": "false", "data_type": "string"},
-    {"field": "BDM Name", "editable": "false", "data_type": "string"},
-    {"field": "Customer Service Name", "editable": "false", "data_type": "string"},
-    {"field": "Company Name", "editable": "true", "data_type": "string"},
-    {"field": "Company Address", "editable": "true", "data_type": "string"},
-    {"field": "Bank Details", "editable": "true", "data_type": "string"}
+    {
+      "label": "Customer Segment",
+      "editable": "false",
+      "input_type": "text",
+      "key": "customer_segment"
+    },
+    {
+      "label": "Sourcing Country",
+      "editable": "true",
+      "input_type": "select",
+      "options": ["USA", "India", "China", "Germany", "Brazil"],
+      "key": "source_country"
+    },
+    {
+      "label": "UAPL Sold-To Code",
+      "editable": "false",
+      "input_type": "text",
+      "key": "sold_to_code"
+    },
+    {
+      "label": "Company Name",
+      "editable": "true",
+      "input_type": "text",
+      "key": "sold_to_comp_name"
+    },
+    {
+      "label": "Incoterm",
+      "editable": "false",
+      "input_type": "text",
+      "key": "incoterm_1"
+    },
+    {
+      "label": "UAPL Ship-To Code",
+      "editable": "false",
+      "input_type": "text",
+      "key": "ship_to_code"
+    },
+    {
+      "label": "Ship-To Company Name",
+      "editable": "true",
+      "input_type": "text",
+      "key": "ship_to_comp1_name"
+    },
+    {
+      "label": "Port of Destination",
+      "editable": "true",
+      "input_type": "text",
+      "key": "port_of_destination"
+    },
+    {
+      "label": "Customer Name",
+      "editable": "true",
+      "input_type": "text",
+      "key": "customer_name"
+    },
+    {
+      "label": "Email Address",
+      "editable": "true",
+      "input_type": "text",
+      "key": "customer_email"
+    },
+    {
+      "label": "Product Type",
+      "editable": "true",
+      "input_type": "text",
+      "key": "product_type"
+    },
+    {
+      "label": "BDM Name",
+      "editable": "false",
+      "input_type": "text",
+      "key": "bdm_name"
+    },
+    {
+      "label": "Appointed Carrier Name",
+      "editable": "true",
+      "input_type": "text",
+      "key": "appointed_carrier_name"
+    },
+    {
+      "label": "Customer Service Name",
+      "editable": "false",
+      "input_type": "text",
+      "key": "customer_service_name"
+    },
+    {
+      "label": "Attention To",
+      "editable": "true",
+      "input_type": "text",
+      "key": "attention_to"
+    },
+    {
+      "label": "Tax Identification Number",
+      "editable": "true",
+      "input_type": "text",
+      "key": "tax_identification_number"
+    },
+    {
+      "label": "Sourcing Cluster",
+      "editable": "false",
+      "input_type": "text",
+      "key": "sourcing_cluster"
+    },
+    {
+      "label": "Payment Term",
+      "editable": "false",
+      "input_type": "text",
+      "key": "payment_term"
+    },
+    {
+      "label": "Company Address",
+      "editable": "true",
+      "input_type": "text",
+      "key": "sold_to_comp_add1"
+    },
+    {
+      "label": "Bank Details",
+      "editable": "true",
+      "input_type": "text",
+      "key": "bank_details"
+    }
   ],
   "Bill of Lading": [
-    {"field": "Consignee", "editable": "true", "data_type": "string"},
-    {"field": "Notify Party", "editable": "true", "data_type": "string"},
-    {"field": "UAPL Ship-To Code", "editable": "true", "data_type": "string"},
-    {"field": "Attention To", "editable": "true", "data_type": "string"},
-    {"field": "Freight Status", "editable": "true", "data_type": "string"},
-    {"field": "Origin Charges", "editable": "true", "data_type": "string"},
-    {"field": "Freight", "editable": "true", "data_type": "string"},
-    {"field": "Destination Charges", "editable": "true", "data_type": "string"},
-    {"field": "Incoterm", "editable": "false", "data_type": "string"},
-    {"field": "Shipping Line or Agent Name", "editable": "true", "data_type": "string"},
-    {"field": "Address", "editable": "true", "data_type": "string"},
-    {"field": "Telephone", "editable": "true", "data_type": "string"},
-    {"field": "Fax", "editable": "true", "data_type": "string"},
-    {"field": "Contact Person", "editable": "true", "data_type": "string"},
-    {"field": "Container Load Type", "editable": "true", "data_type": "enum", "options": ["FCL", "LCL", "FTL"]}
+    {
+      "label": "Consignee",
+      "editable": "true",
+      "input_type": "text",
+      "key": "consignee"
+    },
+    {
+      "label": "Notify Party",
+      "editable": "true",
+      "input_type": "text",
+      "key": "notify_party"
+    },
+    {
+      "label": "UAPL Ship-To Code",
+      "editable": "true",
+      "input_type": "text",
+      "key": "ship_to_code"
+    },
+    {
+      "label": "Attention To",
+      "editable": "true",
+      "input_type": "text",
+      "key": "bl_attention_to"
+    },
+    {
+      "label": "Freight Status",
+      "editable": "true",
+      "input_type": "text",
+      "key": "freight_status"
+    },
+    {
+      "label": "Origin Charges",
+      "editable": "true",
+      "input_type": "text",
+      "key": "origin_charges"
+    },
+    {
+      "label": "Freight",
+      "editable": "true",
+      "input_type": "text",
+      "key": "freight_charges"
+    },
+    {
+      "label": "Destination Charges",
+      "editable": "true",
+      "input_type": "text",
+      "key": "destination_charges"
+    },
+    {
+      "label": "Incoterm",
+      "editable": "false",
+      "input_type": "text",
+      "key": "incoterm_1"
+    },
+    {
+      "label": "Shipping Line or Agent Name",
+      "editable": "true",
+      "input_type": "text",
+      "key": "appointed_carrier_name"
+    },
+    {
+      "label": "Address",
+      "editable": "true",
+      "input_type": "text",
+      "key": "appointed_carrier_add1"
+    },
+    {
+      "label": "Telephone",
+      "editable": "true",
+      "input_type": "text",
+      "key": "telephone"
+    },
+    {
+      "label": "Fax",
+      "editable": "true",
+      "input_type": "text",
+      "key": "fax"
+    },
+    {
+      "label": "Contact Person",
+      "editable": "true",
+      "input_type": "text",
+      "key": "notify_name"
+    },
+    {
+      "label": "Container Load Type",
+      "editable": "true",
+      "input_type": "select",
+      "options": ["FCL", "LCL", "FTL"],
+      "key": "container_load_type"
+    }
   ],
   "Shipping Documents": [
-    {"field": "Factory or Warehouse Packing List", "editable": "true", "data_type": "string"},
-    {"field": "Order Submission", "editable": "true", "data_type": "string"},
-    {"field": "Invoice and Documentation", "editable": "true", "data_type": "string"}
+    {
+      "label": "Factory or Warehouse Packing List",
+      "editable": "true",
+      "input_type": "text",
+      "key": "factory_packing_list"
+    },
+    {
+      "label": "Order Submission",
+      "editable": "true",
+      "input_type": "text",
+      "key": "order_submission"
+    },
+    {
+      "label": "Invoice and Documentation",
+      "editable": "true",
+      "input_type": "text",
+      "key": "inv_doc"
+    }
   ],
   "Mailing Information": [
-    {"field": "Company Name", "editable": "true", "data_type": "string"},
-    {"field": "Company Address", "editable": "true", "data_type": "string"},
-    {"field": "Postal Code", "editable": "true", "data_type": "string"},
-    {"field": "Attention To", "editable": "true", "data_type": "string"},
-    {"field": "Telephone", "editable": "true", "data_type": "string"},
-    {"field": "Fax", "editable": "true", "data_type": "string"},
-    {"field": "Email", "editable": "true", "data_type": "string"}
+    {
+      "label": "Company Name",
+      "editable": "true",
+      "input_type": "text",
+      "key": "mail_comp_name"
+    },
+    {
+      "label": "Company Address",
+      "editable": "true",
+      "input_type": "text",
+      "key": "mail_comp_add1"
+    },
+    {
+      "label": "Postal Code",
+      "editable": "true",
+      "input_type": "text",
+      "key": "postal_code"
+    },
+    {
+      "label": "Attention To",
+      "editable": "true",
+      "input_type": "text",
+      "key": "attention_to"
+    },
+    {
+      "label": "Telephone",
+      "editable": "true",
+      "input_type": "text",
+      "key": "telephone"
+    },
+    {
+      "label": "Fax",
+      "editable": "true",
+      "input_type": "text",
+      "key": "fax"
+    },
+    {
+      "label": "Email",
+      "editable": "true",
+      "input_type": "text",
+      "key": "notify_email"
+    }
   ],
   "Delivery Instruction": [
-    {"field": "Delivery Time Slot", "editable": "true", "data_type": "string"},
-    {"field": "Delivery Days", "editable": "true", "data_type": "string"},
-    {"field": "Maximum Trips Per Day", "editable": "true", "data_type": "string"},
-    {"field": "Contact Person", "editable": "true", "data_type": "string"},
-    {"field": "Telephone Number", "editable": "true", "data_type": "string"},
-    {"field": "Email Address", "editable": "true", "data_type": "string"},
-    {"field": "Are Documents Needed Upon Delivery", "editable": "true", "data_type": "string"},
-    {"field": "Other Instructions", "editable": "true", "data_type": "string"}
+    {
+      "label": "Delivery Time Slot",
+      "editable": "true",
+      "input_type": "text",
+      "key": "delivery_time_slot"
+    },
+    {
+      "label": "Delivery Days",
+      "editable": "true",
+      "input_type": "text",
+      "key": "delivery_days"
+    },
+    {
+      "label": "Maximum Trips Per Day",
+      "editable": "true",
+      "input_type": "text",
+      "key": "max_trips_per_day"
+    },
+    {
+      "label": "Contact Person",
+      "editable": "true",
+      "input_type": "text",
+      "key": "notify_attention_to1"
+    },
+    {
+      "label": "Telephone Number",
+      "editable": "true",
+      "input_type": "text",
+      "key": "telephone_number"
+    },
+    {
+      "label": "Email Address",
+      "editable": "true",
+      "input_type": "text",
+      "key": "notify_email"
+    },
+    {
+      "label": "Are Documents Needed Upon Delivery",
+      "editable": "true",
+      "input_type": "text",
+      "key": "docs_needed_upon_delivery"
+    },
+    {
+      "label": "Other Instructions",
+      "editable": "true",
+      "input_type": "text",
+      "key": "other_instructions"
+    }
   ],
   "Shipment Packing Instruction": [
-    {"field": "Packing Instruction", "editable": "true", "data_type": "string"},
-    {"field": "Specific Packing Instruction", "editable": "true", "data_type": "string"},
-    {"field": "Pre-loading Photos", "editable": "true", "data_type": "string"},
-    {"field": "Pallet Size", "editable": "true", "data_type": "string"},
-    {"field": "Pallet Type", "editable": "true", "data_type": "string"},
-    {"field": "Shipping Mark on Pallet", "editable": "true", "data_type": "string"}
+    {
+      "label": "Packing Instruction",
+      "editable": "true",
+      "input_type": "text",
+      "key": "packing_instruction"
+    },
+    {
+      "label": "Specific Packing Instruction",
+      "editable": "true",
+      "input_type": "text",
+      "key": "specific_packing_instru"
+    },
+    {
+      "label": "Pre-loading Photos",
+      "editable": "true",
+      "input_type": "text",
+      "key": "preloading_photos"
+    },
+    {
+      "label": "Pallet Size",
+      "editable": "true",
+      "input_type": "text",
+      "key": "pallet_dimension"
+    },
+    {
+      "label": "Pallet Type",
+      "editable": "true",
+      "input_type": "text",
+      "key": "pallet_type"
+    },
+    {
+      "label": "Shipping Mark on Pallet",
+      "editable": "true",
+      "input_type": "text",
+      "key": "shipping_mark_on_pallet"
+    }
   ]
 }
+
+
 
     return {"message": "Form field definitions loaded successfully", "data": [form_fields]}
 
