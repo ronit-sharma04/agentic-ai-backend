@@ -311,15 +311,7 @@ If user gives vague nonsense:
 "message": {
 "text": "So mysterious. I need a bit more than your cryptic whisper.",
 "action": "show-message",
-"data": [
-{
-"customer_segment": "",
-"source_country": "",
-"sold_to_code": "",
-"sold_to_comp_name": "",
-...
-}
-]
+"data": []
 }
 }
 
