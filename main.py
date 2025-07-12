@@ -76,4 +76,4 @@ def process_messages(
         return assistant_message
 
     except Exception as e:
-        raise
+        raise Exception(f"Error processing messages: {e}") from e
