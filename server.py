@@ -1,10 +1,11 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import Body, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from db.connection import get_db_connection
 from main import process_messages
 import datetime
 import json
-from typing import Dict, List, Any, Optional, Literal
+from typing import Collection, Dict, List, Any, Optional, Literal
 import re
 
 
@@ -586,3 +587,36 @@ def get_form_fields():
     }
 
     return {"message": "Form field definitions loaded successfully", "data": [form_fields]}
+
+COLLECTION_NAME = "cases"
+
+@app.post("/submit_case")
+def upsert_case(case: Dict[str, Any] = Body(...)):
+    if "case_id" not in case:
+        raise HTTPException(status_code=400, detail="Missing 'case_id' in request body")
+
+    db = get_db_connection(COLLECTION_NAME)
+    collection: Collection = db[COLLECTION_NAME]
+
+    case_id = case["case_id"]
+
+    # Remove _id if user accidentally includes it
+    case.pop("_id", None)
+
+    # Perform upsert
+    collection.update_one(
+        {"case_id": case_id},
+        {"$set": case},
+        upsert=True
+    )
+
+    # Fetch the updated document
+    updated_case = collection.find_one({"case_id": case_id})
+    if updated_case and "_id" in updated_case:
+        updated_case["_id"] = str(updated_case["_id"])  # make ObjectId JSON serializable
+
+    return {
+        "text": "Final Case Details Submitted",
+        "action": "show-message",
+        "data": [updated_case]
+    }
