@@ -11,7 +11,10 @@ from langchain_core.messages import BaseMessage
 from tools.csi_tools import (
     create_cases_tool,
     read_cases_tool,
+    approve_cases_tool,
+    update_cases_tool
 )
+from tools.approved_csi_tools import read_approved_csi_tool
 from langchain_core.output_parsers import JsonOutputKeyToolsParser
 from pydantic import BaseModel
 from typing import Literal, Optional
@@ -38,6 +41,9 @@ llm = ChatOpenAI(
 tools = [
     create_cases_tool,
     read_cases_tool,
+    approve_cases_tool,
+    read_approved_csi_tool,
+    update_cases_tool
 ]
 
 cases_agent = create_react_agent(llm, tools)

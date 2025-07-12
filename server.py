@@ -1,6 +1,7 @@
 from fastapi import Body, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from sqlalchemy import true,false
 from db.connection import get_db_connection
 from main import process_messages
 import datetime
@@ -155,7 +156,7 @@ INTENT: User asks to proceed further after giving all mandatory fields:
 "message": {
 "text": "Opening case with ID: <Case ID from pevious message>, Opening Form.",
 "action": "render-create-csi-form",
-"data": <fetch whole form data with case_id being mentioned>
+"data": <fetch whole form data with case_id being mentioned case_id: "" should be included mandatorily>
 }
 }
 
@@ -199,7 +200,7 @@ Always keep previous chat context in mind when processing new messages for any d
 
 CSI UPDATE FLOW
 
-If user wants to update but doesn't provide reference (like case ID or any other field):
+If user wants to update but doesn't provide reference (like case_id or any other field):
 {
 "role": "assistant",
 "message": {
@@ -286,7 +287,7 @@ If nothing matches:
 {
 "role": "assistant",
 "message": {
-"text": "No CSI records match your ultra-rare criteria along with <the user provided query>. Try something more common.",
+"text": "<Some sarcastic message about no records found or if the user was asking for more and more records, maybe the records were over and this much only>",
 "action": "show-message",
 "data": []
 }
@@ -343,6 +344,7 @@ Never say that the queries are insufficient, user may sometimes give vague queri
 "data": [<Fetched Records based on the user provided query using the read_cases_tool>]
 }
 }
+
 
 DELETE FUNCTIONALITY
 
@@ -513,78 +515,72 @@ async def chat_endpoint(req: ChatRequest):
 @app.get("/get-form-fields")
 def get_form_fields():
     form_fields = {
-        "PART 1": {
-            "Email Address": {"required": "true", "editable": "true", "data_type": "string"},
-            "Attention To": {"required": "true", "editable": "true", "data_type": "string"},
-            "Tax Identification Number": {"required": "true", "editable": "true", "data_type": "string"},
-            "Sourcing Country": {
-                "required": "true",
-                "editable": "true",
-                "data_type": "enum",
-                "options": ["USA", "India", "China", "Germany", "Brazil"]
-            },
-            "Uapl Sold-To Code": {"required": "false", "editable": "false", "data_type": "string"},
-            "Sourcing Cluster": {"required": "false", "editable": "false", "data_type": "string"},
-            "Uapl Ship-To Code": {"required": "false", "editable": "false", "data_type": "string"},
-            "Payment Term": {"required": "false", "editable": "false", "data_type": "string"},
-            "Customer Segment": {"required": "false", "editable": "false", "data_type": "string"},
-            "Bdm Name": {"required": "false", "editable": "false", "data_type": "string"},
-            "Customer Service Name": {"required": "false", "editable": "false", "data_type": "string"},
-            "Company Name": {"required": "false", "editable": "true", "data_type": "string"},
-            "Company Address": {"required": "false", "editable": "true", "data_type": "string"},
-            "Bank Details": {"required": "false", "editable": "true", "data_type": "string"}
-        },
-        "PART 2": {
-            "Consignee": {"required": "true", "editable": "true", "data_type": "string"},
-            "Notify Party": {"required": "true", "editable": "true", "data_type": "string"},
-            "Uapl Ship-To  Code (Port Of Destination / Delivery Location Name)": {"required": "true", "editable": "true", "data_type": "string"},
-            "(Attention To)": {"required": "true", "editable": "true", "data_type": "string"},
-            "Freight Status": {"required": "false", "editable": "true", "data_type": "string"},
-            "Origin Charges": {"required": "false", "editable": "true", "data_type": "string"},
-            "Freight": {"required": "false", "editable": "true", "data_type": "string"},
-            "Destination Charges": {"required": "false", "editable": "true", "data_type": "string"},
-            "Incoterm": {"required": "false", "editable": "false", "data_type": "string"},
-            "Shipping Line / Agent Name": {"required": "false", "editable": "true", "data_type": "string"},
-            "Address": {"required": "false", "editable": "true", "data_type": "string"},
-            "Telephone": {"required": "false", "editable": "true", "data_type": "string"},
-            "Fax": {"required": "false", "editable": "true", "data_type": "string"},
-            "Attention To": {"required": "false", "editable": "true", "data_type": "string"},
-            "Container Load Type (Fcl ,Lcl ,Ftl)": {"required": "false", "editable": "true", "data_type": "string"}
-        },
-        "PART 3": {
-            "Factory Packing List / Warehouse Packing List": {"required": "true", "editable": "true", "data_type": "string"},
-            "Order Submission": {"required": "false", "editable": "true", "data_type": "string"},
-            "Invoice & Documentation": {"required": "false", "editable": "true", "data_type": "string"},
-            "Baki Sare .....................": {"required": "false", "editable": "true", "data_type": "string"}
-        },
-        "PART 4": {
-            "Company Name": {"required": "false", "editable": "true", "data_type": "string"},
-            "Company Address": {"required": "false", "editable": "true", "data_type": "string"},
-            "Postal Code": {"required": "false", "editable": "true", "data_type": "string"},
-            "Attention To": {"required": "false", "editable": "true", "data_type": "string"},
-            "Telephone": {"required": "false", "editable": "true", "data_type": "string"},
-            "Fax": {"required": "false", "editable": "true", "data_type": "string"},
-            "Email": {"required": "false", "editable": "true", "data_type": "string"}
-        },
-        "PART 5": {
-            "Delivery Time Slot": {"required": "false", "editable": "true", "data_type": "string"},
-            "Delivery Day(s)": {"required": "false", "editable": "true", "data_type": "string"},
-            "Maximum Trips Per Day": {"required": "false", "editable": "true", "data_type": "string"},
-            "Contact Person": {"required": "false", "editable": "true", "data_type": "string"},
-            "Telephone Number": {"required": "false", "editable": "true", "data_type": "string"},
-            "Email Address": {"required": "false", "editable": "true", "data_type": "string"},
-            "Are Documents Needed Upon Delivery?": {"required": "false", "editable": "true", "data_type": "string"},
-            "Others, Specify": {"required": "false", "editable": "true", "data_type": "string"}
-        },
-        "PART 6": {
-            "Packing Instruction": {"required": "true", "editable": "true", "data_type": "string"},
-            "Specific Packing Instruction": {"required": "true", "editable": "true", "data_type": "string"},
-            "Pre Loading Photos": {"required": "true", "editable": "true", "data_type": "string"},
-            "Pallet Size": {"required": "false", "editable": "true", "data_type": "string"},
-            "Pallet Type": {"required": "false", "editable": "true", "data_type": "string"},
-            "Shipping Mark On Pallet (Name)": {"required": "false", "editable": "true", "data_type": "string"}
-        }
-    }
+  "Customer Information": [
+    {"field": "Email Address", "editable": "true", "data_type": "string"},
+    {"field": "Attention To", "editable": "true", "data_type": "string"},
+    {"field": "Tax Identification Number", "editable": "true", "data_type": "string"},
+    {"field": "Sourcing Country", "editable": "true", "data_type": "enum", "options": ["USA", "India", "China", "Germany", "Brazil"]},
+    {"field": "UAPL Sold-To Code", "editable": "false", "data_type": "string"},
+    {"field": "Sourcing Cluster", "editable": "false", "data_type": "string"},
+    {"field": "UAPL Ship-To Code", "editable": "false", "data_type": "string"},
+    {"field": "Payment Term", "editable": "false", "data_type": "string"},
+    {"field": "Customer Segment", "editable": "false", "data_type": "string"},
+    {"field": "BDM Name", "editable": "false", "data_type": "string"},
+    {"field": "Customer Service Name", "editable": "false", "data_type": "string"},
+    {"field": "Company Name", "editable": "true", "data_type": "string"},
+    {"field": "Company Address", "editable": "true", "data_type": "string"},
+    {"field": "Bank Details", "editable": "true", "data_type": "string"}
+  ],
+  "Bill of Lading": [
+    {"field": "Consignee", "editable": "true", "data_type": "string"},
+    {"field": "Notify Party", "editable": "true", "data_type": "string"},
+    {"field": "UAPL Ship-To Code", "editable": "true", "data_type": "string"},
+    {"field": "Attention To", "editable": "true", "data_type": "string"},
+    {"field": "Freight Status", "editable": "true", "data_type": "string"},
+    {"field": "Origin Charges", "editable": "true", "data_type": "string"},
+    {"field": "Freight", "editable": "true", "data_type": "string"},
+    {"field": "Destination Charges", "editable": "true", "data_type": "string"},
+    {"field": "Incoterm", "editable": "false", "data_type": "string"},
+    {"field": "Shipping Line or Agent Name", "editable": "true", "data_type": "string"},
+    {"field": "Address", "editable": "true", "data_type": "string"},
+    {"field": "Telephone", "editable": "true", "data_type": "string"},
+    {"field": "Fax", "editable": "true", "data_type": "string"},
+    {"field": "Contact Person", "editable": "true", "data_type": "string"},
+    {"field": "Container Load Type", "editable": "true", "data_type": "enum", "options": ["FCL", "LCL", "FTL"]}
+  ],
+  "Shipping Documents": [
+    {"field": "Factory or Warehouse Packing List", "editable": "true", "data_type": "string"},
+    {"field": "Order Submission", "editable": "true", "data_type": "string"},
+    {"field": "Invoice and Documentation", "editable": "true", "data_type": "string"}
+  ],
+  "Mailing Information": [
+    {"field": "Company Name", "editable": "true", "data_type": "string"},
+    {"field": "Company Address", "editable": "true", "data_type": "string"},
+    {"field": "Postal Code", "editable": "true", "data_type": "string"},
+    {"field": "Attention To", "editable": "true", "data_type": "string"},
+    {"field": "Telephone", "editable": "true", "data_type": "string"},
+    {"field": "Fax", "editable": "true", "data_type": "string"},
+    {"field": "Email", "editable": "true", "data_type": "string"}
+  ],
+  "Delivery Instruction": [
+    {"field": "Delivery Time Slot", "editable": "true", "data_type": "string"},
+    {"field": "Delivery Days", "editable": "true", "data_type": "string"},
+    {"field": "Maximum Trips Per Day", "editable": "true", "data_type": "string"},
+    {"field": "Contact Person", "editable": "true", "data_type": "string"},
+    {"field": "Telephone Number", "editable": "true", "data_type": "string"},
+    {"field": "Email Address", "editable": "true", "data_type": "string"},
+    {"field": "Are Documents Needed Upon Delivery", "editable": "true", "data_type": "string"},
+    {"field": "Other Instructions", "editable": "true", "data_type": "string"}
+  ],
+  "Shipment Packing Instruction": [
+    {"field": "Packing Instruction", "editable": "true", "data_type": "string"},
+    {"field": "Specific Packing Instruction", "editable": "true", "data_type": "string"},
+    {"field": "Pre-loading Photos", "editable": "true", "data_type": "string"},
+    {"field": "Pallet Size", "editable": "true", "data_type": "string"},
+    {"field": "Pallet Type", "editable": "true", "data_type": "string"},
+    {"field": "Shipping Mark on Pallet", "editable": "true", "data_type": "string"}
+  ]
+}
 
     return {"message": "Form field definitions loaded successfully", "data": [form_fields]}
 
