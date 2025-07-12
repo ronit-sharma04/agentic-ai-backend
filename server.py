@@ -885,8 +885,6 @@ def get_form_fields():
   ]
 }
 
-
-
     return {"message": "Form field definitions loaded successfully", "data": [form_fields]}
 
 COLLECTION_NAME = "cases"
