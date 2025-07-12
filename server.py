@@ -592,31 +592,45 @@ COLLECTION_NAME = "cases"
 
 @app.post("/submit_case")
 def upsert_case(case: Dict[str, Any] = Body(...)):
+    print("Received request body:", case)
+
     if "case_id" not in case:
+        print("Error: 'case_id' missing from request body")
         raise HTTPException(status_code=400, detail="Missing 'case_id' in request body")
 
+    print("Connecting to DB...")
     db = get_db_connection(COLLECTION_NAME)
     collection: Collection = db[COLLECTION_NAME]
+    print("Connected to collection:", COLLECTION_NAME)
 
     case_id = case["case_id"]
+    print(f"Processing case_id: {case_id}")
 
-    # Remove _id if user accidentally includes it
-    case.pop("_id", None)
+    if "_id" in case:
+        print("Removing '_id' from case to avoid MongoDB conflict")
+        case.pop("_id", None)
 
-    # Perform upsert
-    collection.update_one(
+    print("Performing upsert operation...")
+    result = collection.update_one(
         {"case_id": case_id},
         {"$set": case},
         upsert=True
     )
+    print(f"Upsert operation complete. Matched count: {result.matched_count}, Modified count: {result.modified_count}, Upserted ID: {result.upserted_id}")
 
-    # Fetch the updated document
+    print("Fetching updated document from DB...")
     updated_case = collection.find_one({"case_id": case_id})
-    if updated_case and "_id" in updated_case:
-        updated_case["_id"] = str(updated_case["_id"])  # make ObjectId JSON serializable
+    print("Fetched updated case:", updated_case)
 
-    return {
+    if updated_case and "_id" in updated_case:
+        updated_case["_id"] = str(updated_case["_id"])
+        print("Converted '_id' to string for JSON serialization")
+
+    response = {
         "text": "Final Case Details Submitted",
         "action": "show-message",
         "data": [updated_case]
     }
+
+    print("Returning response:", response)
+    return response
