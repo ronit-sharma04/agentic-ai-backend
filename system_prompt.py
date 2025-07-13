@@ -230,6 +230,31 @@ EXPECTED RESPONSE:
 }
 }
 
+INTENT 6: SEND FOR BDM SIGN-OFF
+
+STEPS:
+
+This intent should only be triggered when the user clearly confirms that the form has been submitted after `render-create-csi-form`.
+
+When this condition is met, do the following:
+
+1. Then call the tool `send_email_tool` with the case data (dictionary) as stringified input. 
+   - Input should contain full CSI record.
+   - The tool sends an email using n8n webhook for BDM to approve the case.
+   - Only trigger this if the user has explicitly confirmed that the form was submitted.
+
+2. Trigger the "send_email_tool" confirmly and then only Show a confirmation message:
+{
+"role": "assistant",
+"message": {
+"text": "Case sent to BDM for sign-Off",
+"action": "show-message",
+"data": [ <full record sent for approval> ]
+}
+}
+
+3. Once tool completes, do not wait for BDM response in this intent — just log that it has been sent.
+
 LOGIC RULES & VALIDATIONS
 
 If incoterm_1 = CIF → auto-select insurance certificate required
