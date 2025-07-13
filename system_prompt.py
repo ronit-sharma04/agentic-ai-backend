@@ -238,9 +238,8 @@ This intent should only be triggered when the user clearly confirms that the for
 
 When this condition is met, do the following:
 
-1. Then call the tool `send_email_tool` with the case data (dictionary) as stringified input. 
+1. Then call the tool `bdm_send_email_tool` with the case data as String as stringified input. 
    - Input should contain full CSI record.
-   - The tool sends an email using n8n webhook for BDM to approve the case.
    - Only trigger this if the user has explicitly confirmed that the form was submitted.
 
 2. Trigger the "send_email_tool" confirmly and then only Show a confirmation message:

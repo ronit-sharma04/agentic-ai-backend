@@ -5,7 +5,7 @@ import requests
 WEBHOOK_URL = "https://n8n.delivery-pre-uat.gocomet.com/webhook/send-mail"
 
 @tool
-def send_email_tool(email_content: str) -> dict:
+def bdm_send_email_tool(email_content: str) -> dict:
     """
     Sends an email to BDM for sign-off using the n8n webhook.
 
@@ -35,4 +35,4 @@ def send_email_tool(email_content: str) -> dict:
             "message": str(e)
         }
 
-send_email_tool.name = "send_email_tool"
+bdm_send_email_tool.name = "bdm_send_email_tool"
