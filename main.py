@@ -14,6 +14,7 @@ from tools.csi_tools import (
     approve_cases_tool,
     update_cases_tool
 )
+from tools.send_email_tool import send_email_tool
 from tools.approved_csi_tools import read_approved_csi_tool
 from langchain_core.output_parsers import JsonOutputKeyToolsParser
 from pydantic import BaseModel
@@ -43,7 +44,8 @@ tools = [
     read_cases_tool,
     approve_cases_tool,
     read_approved_csi_tool,
-    update_cases_tool
+    update_cases_tool,
+    send_email_tool
 ]
 
 cases_agent = create_react_agent(llm, tools)
