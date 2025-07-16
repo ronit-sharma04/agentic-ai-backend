@@ -27,7 +27,7 @@ class ChatRequest(BaseModel):
 
 class ChatSimpleMessage(BaseModel):
     text: str
-    action: Literal["show-message", "render-create-csi-form", "render-update-csi-form"]
+    action: Literal["show-message", "render-create-csi-form", "render-update-csi-form","render-vertical-table"]
     data: Optional[List[Dict[str, Any]]] = []
 
 class ChatSimpleResponse(BaseModel):
@@ -135,8 +135,7 @@ def get_form_fields():
     {
       "label": "Sourcing Country",
       "editable": "true",
-      "input_type": "select",
-      "options": ["USA", "India", "China", "Germany", "Brazil"],
+      "input_type": "text",
       "key": "source_country"
     },
     {
