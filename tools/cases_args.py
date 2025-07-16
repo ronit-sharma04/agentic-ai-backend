@@ -143,7 +143,7 @@ class CSIToolArgs(BaseModel):
     packing_instruction: Optional[str] = ""
     pallet_type: Optional[str] = ""
     pallet_dimension: Optional[str] = ""
-    specific_packing_instru: Optional[str] = ""
+    specific_packing_instrument: Optional[str] = ""
     preloading_photos: Optional[str] = ""
     shipping_mark_on_pallet: Optional[str] = ""
     create_date: Optional[str] = ""
@@ -152,4 +152,3 @@ class CSIToolArgs(BaseModel):
     page: Optional[int] = 1
     customer_name: Optional[str] = ""
     customer_email: Optional[str] = ""
-

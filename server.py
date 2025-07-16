@@ -36,7 +36,7 @@ class ChatSimpleResponse(BaseModel):
 
 session_histories: Dict[str, List[Dict[str, str]]] = {}
 
-
+from fetch_process_activity import fetch_process_activity
 
 def log(msg: str):
     print(f"[{datetime.datetime.now().isoformat()}] {msg}")
@@ -49,7 +49,7 @@ async def chat_endpoint(req: ChatRequest):
         fetched_ruleset = fetch_business_ruleset() 
         SYSTEM_PROMPT = {
             "role": "system",
-            "content": fetch_system_prompt().replace("{RULESET}", fetched_ruleset)
+            "content": fetch_system_prompt()
         }
         # log(SYSTEM_PROMPT["content"])
         chat_history = session_histories.get(req.session_id, [])

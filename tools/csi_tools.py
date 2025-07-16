@@ -130,6 +130,7 @@ def create_cases_tool(inputs: CSIToolArgs) -> str:
     except Exception as e:
         logging.error("Error in create_csi_tool: %s", e)
         return "[CREATE ERROR] An unexpected error occurred."
+create_cases_tool.name = "create_cases_tool"
 
 
 @tool

@@ -15,6 +15,7 @@ from tools.csi_tools import (
     update_cases_tool
 )
 from tools.send_email_tool import bdm_send_email_tool
+from tools.dynamic_updates_tool import fetch_mandatory_fields_tool,fetch_process_activity_tool 
 from tools.approved_csi_tools import read_approved_csi_tool
 from langchain_core.output_parsers import JsonOutputKeyToolsParser
 from pydantic import BaseModel
@@ -45,7 +46,9 @@ tools = [
     approve_cases_tool,
     read_approved_csi_tool,
     update_cases_tool,
-    bdm_send_email_tool
+    bdm_send_email_tool,
+    fetch_mandatory_fields_tool,
+    fetch_process_activity_tool
 ]
 
 cases_agent = create_react_agent(llm, tools)
@@ -78,4 +81,4 @@ def process_messages(
         return assistant_message
 
     except Exception as e:
-        raise
+        raise Exception(f"Error processing messages: {e}") from e
