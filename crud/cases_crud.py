@@ -5,7 +5,7 @@ import re
 import random
 COLLECTION = "cases"
 from bson import ObjectId
-
+from fetch_process_activity_status import fetch_process_activity_status
 def read_cases(page: int = 1, **kwargs) -> dict:
     print(f"[READ] Called with kwargs={kwargs}, page={page}")
     try:
@@ -51,6 +51,9 @@ def read_cases(page: int = 1, **kwargs) -> dict:
         return {"message": "An unexpected error occurred during the operation.", "data": []}
     
 
+import random
+from pymongo.errors import DuplicateKeyError, PyMongoError
+
 def create_cases(**kwargs) -> dict:
     print("[CREATE] Called with kwargs:", kwargs)
     try:
@@ -63,11 +66,15 @@ def create_cases(**kwargs) -> dict:
         kwargs["case_id"] = case_id
         kwargs["csi_status"] = "pending"
 
+        # Add process_activity from n8n
+        process_activity = fetch_process_activity_status()
+        kwargs["process_activity"] = process_activity
+
         # Prepare document
         doc = dict(kwargs)
         print("[CREATE] Document to insert:", doc)
 
-        # Insert document (MongoDB auto-generates _id)
+        # Insert document
         result = coll.insert_one(doc)
         print(f"[CREATE] Inserted with _id: {result.inserted_id}")
 
