@@ -90,7 +90,7 @@ Case created:
 {
     "role": "assistant",
     "message": {
-        "text": "Case opened with ID: csi-case-2025-0035, should I proceed further?",
+        "text": "Create CSI intent detected, mandatory fields validated, should I proceed with CSI case creation?",
         "action": "show-message",
         "data": []
     }
@@ -99,7 +99,7 @@ User confirms to proceed:
 {
     "role": "assistant",
     "message": {
-        "text": "Opening case with ID: csi-case-2025-0035<Fetched caseID should be put>, Opening Form.",
+        "text": "Initiating case with ID: csi-case-2025-0035<Fetched caseID should be put>, Opening CSI Form.",
         "action": "render-create-csi-form",
         "data": [
             {
@@ -187,7 +187,7 @@ EXPECTED RESPONSE:
 {
     "role": "assistant",
     "message": {
-        "text": "Opening case with ID: csi-case-2025-0035, Opening Form.",
+        "text": "Initiating case with ID: csi-case-2025-0035, Opening CSI Form.",
         "action": "render-create-csi-form",
         "data": [
             {
@@ -232,6 +232,18 @@ BDM sign-off not required, check using fetch_process_activity_tool:
         "text": "Well, look at you, submitting cases like a pro. Case submitted, awaiting manual approval",
         "action": "show-message",
         "data": [ { /* full record submitted */ } ]
+    }
+}
+
+INTENT 7:
+User asks to approve a case
+Use the approve_cases_tool to approve the case based on user query and respond:
+{
+    "role": "assistant",
+    "message": {
+        "text": "Well, Your case has been approved",
+        "action": "show-message",
+        "data": [ { /* full record approved */ } ]
     }
 }
 
