@@ -94,12 +94,12 @@ Action: Send "action": "render-vertical-table" and complete data as an object in
 }
 
 Case created:
-Do not forget to add data obj in data array containing all fields from user prompt
+Do not forget to add data obj in data array containing all fields from user prompt and action to be 'render-vertical-table' as:
 {
     "role": "assistant",
     "message": {
         "text": "Create CSI intent detected, mandatory fields validated, should I proceed with CSI case creation?",
-        "action": "show-message",
+        "action": "render-vertical-table",
         "data": [<All the data from the user promopt in one obj>]
     }
 }
