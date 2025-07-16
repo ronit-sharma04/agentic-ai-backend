@@ -12,8 +12,9 @@ from tools.csi_tools import (
     create_cases_tool,
     read_cases_tool,
     approve_cases_tool,
-    update_cases_tool
+    update_cases_tool,
 )
+from tools.csi_tools import approve_cases_tool
 from tools.send_email_tool import bdm_send_email_tool
 from tools.dynamic_updates_tool import fetch_mandatory_fields_tool,fetch_process_activity_tool 
 from tools.approved_csi_tools import read_approved_csi_tool

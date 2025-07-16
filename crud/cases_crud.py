@@ -32,7 +32,7 @@ def read_cases(page: int = 1, **kwargs) -> dict:
 
         total_count = coll.count_documents(query)
         print(f"[READ] Total matching docs: {total_count}")
-        if total_count==0 & page>=1:
+        if total_count == 0 and page >= 1:
             return {"message": "CSI cases for this page number finished.", "data": []}
         elif total_count == 0:
             return {"message": "No CSI Cases found.", "data": []}
@@ -42,17 +42,26 @@ def read_cases(page: int = 1, **kwargs) -> dict:
 
         docs = list(coll.find(query, {"_id": 0}).skip(offset).limit(limit))
 
-        message = f"{total_count} Cases found. Showing page {page} with {len(docs)} Cases."
-        return {"message": message, "data": docs}
+        # Remove empty fields from each document
+        cleaned_docs = [
+            {k: v for k, v in doc.items() if v not in (None, "", [], {}, ())}
+            for doc in docs
+        ]
+
+        message = f"{total_count} Cases found. Showing page {page} with {len(cleaned_docs)} Cases."
+        return {"message": message, "data": cleaned_docs}
 
     except PyMongoError:
         return {"message": "An unexpected error occurred while fetching the Cases.", "data": []}
     except Exception:
         return {"message": "An unexpected error occurred during the operation.", "data": []}
+
     
 
 import random
 from pymongo.errors import DuplicateKeyError, PyMongoError
+
+import datetime
 
 def create_cases(**kwargs) -> dict:
     print("[CREATE] Called with kwargs:", kwargs)
@@ -69,6 +78,9 @@ def create_cases(**kwargs) -> dict:
         # Add process_activity from n8n
         process_activity = fetch_process_activity_status()
         kwargs["process_activity"] = process_activity
+
+        # Add created_at timestamp (timezone-aware UTC)
+        kwargs["created_at"] = datetime.datetime.now(datetime.timezone.utc)
 
         # Prepare document
         doc = dict(kwargs)
@@ -105,7 +117,6 @@ def create_cases(**kwargs) -> dict:
             "error": True,
             "message": "An unexpected error occurred during the operation."
         }
-
 
 def approve_cases(**kwargs) -> dict:
     print("[APPROVE] Called with kwargs:", kwargs)
@@ -179,81 +190,48 @@ def approve_cases(**kwargs) -> dict:
         }
 
 
-def update_case(**kwargs) -> dict:
-    print("[UPDATE] Called with kwargs:", kwargs)
+def update_case(query_fields: dict, update_fields: dict) -> dict:
+    print("[UPDATE] Query:", query_fields)
+    print("[UPDATE] Update:", update_fields)
     try:
         db = get_db_connection(COLLECTION)
-        print("[UPDATE] Got DB connection")
         coll = db[COLLECTION]
 
-        # Separate query fields and update fields
-        query_fields = {}
-        update_fields = kwargs.copy()
-
-        for k, v in kwargs.items():
+        # Build query
+        parsed_query = {}
+        for k, v in query_fields.items():
             if v is not None:
                 if k in ("id", "_id"):
                     try:
-                        query_fields["_id"] = ObjectId(v)
+                        parsed_query["_id"] = ObjectId(v)
                     except Exception:
-                        query_fields["_id"] = v
+                        parsed_query["_id"] = v
                 elif isinstance(v, str):
                     pattern = re.escape(v)
-                    query_fields[k] = {"$regex": pattern, "$options": "i"}
+                    parsed_query[k] = {"$regex": pattern, "$options": "i"}
                 else:
-                    query_fields[k] = v
+                    parsed_query[k] = v
 
-        print("[UPDATE] Query fields:", query_fields)
-
-        # Find the first matching document
-        existing_doc = coll.find_one(query_fields)
+        print("[UPDATE] Parsed query fields:", parsed_query)
+        existing_doc = coll.find_one(parsed_query)
         if not existing_doc:
-            print("[UPDATE] No matching case found.")
-            return {
-                "message": "No matching Case found. Update not performed.",
-                "data": []
-            }
-
-        print("[UPDATE] Found existing case:", existing_doc)
-
-        # Prevent updating by identifier fields
-        for key in query_fields:
-            update_fields.pop(key, None)
-
-        if not update_fields:
-            return {
-                "message": "No update fields provided after filtering query keys.",
-                "data": []
-            }
+            return {"message": "No matching Case found. Update not performed.", "data": []}
 
         # Perform update
         result = coll.update_one({"_id": existing_doc["_id"]}, {"$set": update_fields})
         if result.modified_count > 0:
             updated_doc = coll.find_one({"_id": existing_doc["_id"]}, {"_id": 0})
-            print("[UPDATE] Updated case:", updated_doc)
-            return {
-                "message": "Case updated successfully.",
-                "data": updated_doc
-            }
+            return {"message": "Case updated successfully.", "data": updated_doc}
         else:
-            print("[UPDATE] No changes made.")
-            return {
-                "message": "No changes made to the Case.",
-                "data": existing_doc
-            }
+            return {"message": "No changes made to the Case.", "data": existing_doc}
 
     except PyMongoError as e:
         print("[UPDATE ERROR] PyMongoError:", e)
-        return {
-            "error": True,
-            "message": "An unexpected error occurred while updating the Case."
-        }
+        return {"error": True, "message": "An unexpected error occurred while updating the Case."}
     except Exception as e:
         print("[UPDATE ERROR] Exception:", e)
-        return {
-            "error": True,
-            "message": "An unexpected error occurred during the operation."
-        }
+        return {"error": True, "message": "An unexpected error occurred during the operation."}
+
 
 def delete_csi(**kwargs) -> dict:
     print("[DELETE] Called with kwargs:", kwargs)
