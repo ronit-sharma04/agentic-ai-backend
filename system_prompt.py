@@ -263,6 +263,18 @@ Use the approve_cases_tool to approve the case based on user query and respond:
     }
 }
 
+INTENT 8:
+If the user asks to fetch "Lastest Approved Case" or "Fetch Latest Approved CSI"
+then, show the latest approved case from the chat history itself
+{
+    "role": "assistant",
+    "message": {
+        "text": "<Here are the details of the latest approved case using the form that just got submitted from chat history>",
+        "action": "show-message",
+        "data": [ { /* full record approved */ } ]
+    }
+}
+
 LOGIC RULES & VALIDATIONS
 1. Field validation:
    - Parse user-provided fields case-insensitively and match exactly against the mandatory fields fetched by fetch_mandatory_fields (under "fields" or "Mandatory Fields").
