@@ -11,13 +11,13 @@ from langchain_core.messages import BaseMessage
 from tools.csi_tools import (
     create_cases_tool,
     read_cases_tool,
-    approve_cases_tool,
-    update_cases_tool,
+    approve_case_tool,
+    update_case_tool,
+    delete_case_tool,
+    read_approved_csi_tool
 )
-from tools.csi_tools import approve_cases_tool
 from tools.send_email_tool import bdm_send_email_tool
-from tools.dynamic_updates_tool import fetch_mandatory_fields_tool,fetch_process_activity_tool 
-from tools.approved_csi_tools import read_approved_csi_tool
+from tools.dynamic_updates_tool import fetch_mandatory_fields_tool, fetch_process_activity_tool
 from langchain_core.output_parsers import JsonOutputKeyToolsParser
 from pydantic import BaseModel
 from typing import Literal, Optional
@@ -42,14 +42,20 @@ llm = ChatOpenAI(
     temperature=0,
 )
 tools = [
-    create_cases_tool,
-    read_cases_tool,
-    approve_cases_tool,
-    read_approved_csi_tool,
-    update_cases_tool,
-    bdm_send_email_tool,
-    fetch_mandatory_fields_tool,
-    fetch_process_activity_tool
+    # CSI Case operations (draft/pending records)
+    create_cases_tool,  # Create new draft CSI cases
+    read_cases_tool,    # Read/search draft CSI cases
+    update_case_tool,   # Update existing draft CSI cases
+    delete_case_tool,   # Delete draft CSI cases
+    approve_case_tool,  # Approve a case and move to approved_csi collection
+    
+    # Approved CSI operations (final/read-only records)
+    read_approved_csi_tool,  # Read/search approved CSI records
+    
+    # Support tools
+    bdm_send_email_tool,      # Send email notifications
+    fetch_mandatory_fields_tool,  # Get required fields for case creation
+    fetch_process_activity_tool   # Get current process activity status
 ]
 
 cases_agent = create_react_agent(llm, tools)
