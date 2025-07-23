@@ -1,204 +1,249 @@
 from langchain_core.tools import tool
-from crud.cases_crud import create_cases, read_cases, approve_cases
-from pydantic import ValidationError
-from tools.cases_args import CSIToolArgs
+from crud.cases_crud import read_cases, create_case, update_case, delete_case, approve_case, get_case_by_id
+from crud.approved_csi_crud import read_approved_csi, create_approved_csi, update_approved_csi, delete_approved_csi
+from pydantic import ValidationError, BaseModel, Field
+from typing import Dict, Any, Optional, List, Union
 import logging
+import traceback
+import json
+
+# Define Pydantic models for tool inputs
+class CSIToolArgs(BaseModel, extra="allow"):
+    """Arguments for CSI tools with flexible field support"""
+    def model_dump(self):
+        # Return all fields except private ones
+        return {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
+
+
+class UpdateCaseArgs(BaseModel):
+    """Arguments for update case tool"""
+    query_fields: Dict[str, Any] = Field(..., description="Fields to identify the case to update")
+    update_fields: Dict[str, Any] = Field(..., description="Fields to update in the case")
+
+class DeleteCaseArgs(BaseModel):
+    """Arguments for delete case tool"""
+    query_fields: Dict[str, Any] = Field(..., description="Fields to identify the case to delete")
 
 
 @tool
 def read_cases_tool(inputs: CSIToolArgs) -> dict:
     """
-    Retrieve CSI (Customer Shipment Instruction) records from the database using advanced filtering and pagination.
+    Retrieve CSI Cases (draft/pending Customer Shipment Instruction records) from the database using advanced filtering and pagination.
 
-    This tool accepts multiple optional filtering parameters based on the CSI schema and returns up to 5 records per page.
+    This tool searches the 'cases' collection which contains draft/pending CSI records that have not yet been approved.
+    For approved/historical CSI records, use the read_approved_csi_tool instead.
 
     === Capabilities ===
-    - Supports full-text, case-insensitive search on string fields.
-    - Accepts MongoDB ObjectId (`id` or `_id`) when provided.
-    - Filters only non-empty fields automatically.
-    - Paginates results using the `page` parameter (default: 1).
-    - Returns a summary message and matched records.
+    - Supports full-text, case-insensitive search on string fields
+    - Accepts MongoDB ObjectId (`id` or `_id`) when provided
+    - Filters only non-empty fields automatically
+    - Paginates results using the `page` parameter (default: 1)
+    - Returns a structured response with status, message, and data fields
 
     === Filterable Fields ===
     You can provide any of the following fields as filters:
     
-    sold_to_code, sold_to_comp_name, sold_to_comp_add1, sold_to_comp_add2, sold_to_comp_add3, sold_to_comp_add4,
-    source_country, sourcing_cluster, ship_to_code, ship_to_comp1_name, ship_to_comp1_add1, ship_to_comp1_add2,
-    ship_to_comp1_add3, ship_to_comp1_add4, payment_term, customer_segment, bdm_name, bdm_email,
-    customer_service_name, customer_service_email, consignee, notify_party, notify_name, notify_add1, notify_add2,
-    notify_add3, notify_add4, notify_attention_to1, notify_email, port_of_destination, bl_terminal,
-    bl_container_yard, bl_attention_to, freight_status, incoterm_1, origin_charges, freight_charges,
-    destination_charges, appointed_carrier_name, appointed_carrier_add1, appointed_carrier_add2,
-    appointed_carrier_add3, appointed_carrier_add4, fcl, lcl, invoice_unsigned, invoice_signed_and_hc,
-    invoice_sicc_endorsed, invoice_signed_legalized, invoice_special_instructions, packinglist_unsigned_uapl_sc,
-    packinglist_signed_uapl_sc, factory_packing_list, airway_bill, bill_of_lading, bol_special_instructions,
-    booking_confirm_carrier, proforma_invoice, mfg_date, exp_date, batch_code, delivery_notes, shelf_life_hpc,
-    shelf_life_foods, shelf_life_icecream, insurance_certificate, product_type, coo_manual, coo_sicc,
-    coo_dispatchcountry, form_ak_korea, form_vk_korea, form_ai_india, form_d_sea, form_aanz_australia,
-    form_e_china, eur1_europe, form_1, form_2, form_sadc, form_chafta, form_comesa, form_usmca, noaa_form,
-    form_cepa, form_safta, form_ind_aus_ecta, form_cafta, form_kafta, form_a_ukfta, certificate_of_quality,
-    health_certificate, halal_certificate, dg_certificate, fumigation_certificate, isf_certificate,
-    annual_packing_declaration, certificate_of_analysis, certificate_of_confirmity, saso_coc, aqis, ex188,
-    bacterial_examination, manufacture_declaration, quarantine_declaration, stuffing_rpt_load_sheet,
-    dairy_egg_declaration, ice_declaration, msds, sales_contract, vessel_certificate, tsca_certificate,
-    t1_certificate, europe_health_certificate, phytosanitary_certificate, free_sales_certificate,
-    radioactivity_certificate, cnca_certificate, gsp_certificate, ectn_document, bill_of_exports,
-    additional_document_1, additional_document_2, additional_document_3, order_submission, inv_doc,
-    mail_comp_name, mail_comp_add1, mail_comp_add2, mail_comp_add3, mail_comp_add4, postal_code,
-    prebooking_required, delivery_time_slot, delivery_days, max_trips_per_day, docs_needed_upon_delivery,
-    other_specify, packing_instruction, pallet_type, pallet_dimension, specific_packing_instru,
-    preloading_photos, shipping_mark_on_pallet, create_date, modify_date, csi_status, page
+    case_id, sold_to_code, sold_to_comp_name, ship_to_code, ship_to_comp1_name, 
+    source_country, customer_segment, bdm_name, bdm_email, customer_service_email,
+    consignee, notify_party, port_of_destination, freight_status, incoterm_1,
+    invoice_signed_and_hc, bill_of_lading, insurance_certificate, product_type,
+    packing_instruction, csi_status, created_at, modified_at, approved_at, process_activity
+    
+    And many other fields from the CSI schema.
 
     === Returns ===
-    - A message with the total number of matching records and page info.
-    - A list of up to 5 matched CSI documents (with `_id` removed).
+    - success: Boolean indicating if the operation succeeded
+    - message: Description of the result with count of matching records
+    - data: Array of matching CSI case documents (with `_id` removed)
+    - error: Boolean indicating if an error occurred (only present on error)
 
     Example Usage:
-    Use this tool to search for CSI cases using any of the fields of the schema with exact name from scehma and paginate through the results.
+    Use this tool to search for draft/pending CSI cases that have not yet been approved.
     """
-
-    data = {k: v for k, v in inputs.model_dump().items() if v not in ("", None)}
-    print(f"[CSI READ TOOL] Called with inputs={data}")
-    result = read_cases(**data)
-    print(f"[CSI READ TOOL] Result: {result}")
-    return result
+    try:
+        # Extract page parameter if present, otherwise use default
+        data = inputs.model_dump()
+        page = data.pop('page', 1) if 'page' in data else 1
+        
+        # Log the tool invocation
+        logging.info(f"[READ_CASES_TOOL] Called with filters={data}, page={page}")
+        
+        # Call the underlying CRUD function
+        result = read_cases(page=page, **data)
+        
+        # Log the result summary
+        logging.info(f"[READ_CASES_TOOL] Found {len(result.get('data', []))} records")
+        
+        return result
+    except Exception as e:
+        # Log the full error with traceback
+        logging.error(f"[READ_CASES_TOOL] Error: {str(e)}")
+        logging.error(traceback.format_exc())
+        
+        # Return a structured error response
+        return {
+            "success": False,
+            "message": f"Error reading cases: {str(e)}",
+            "data": [],
+            "error": True
+        }
 
 read_cases_tool.name = "csi_read_tool"
 
 
 @tool
-def create_cases_tool(inputs: CSIToolArgs) -> str:
+def create_cases_tool(inputs: CSIToolArgs) -> dict:
     """
-    Create a new CSI (Customer Shipment Instruction) record in the database using provided input fields.
+    Create a new CSI Case (draft/pending Customer Shipment Instruction record) in the database.
 
-    This tool accepts all CSI fields (as per the schema) and inserts a new record into the CSI database.
+    This tool creates a new record in the 'cases' collection which stores draft/pending CSI records.
+    The case will initially have 'pending' status and can later be approved using the approve_case_tool.
 
     === Capabilities ===
-    - Accepts any combination of valid CSI fields as input.
-    - Automatically generates a unique `case_id` for the record.
-    - Sets default status `csi_status = "pending"` for every new record.
-    - Excludes `_id` (MongoDB auto-generates it).
-    - Validates data using Pydantic before database insertion.
+    - Accepts any combination of valid CSI fields as input
+    - Automatically generates a unique `case_id` for the record (format: CSI-XXXXXXXX)
+    - Sets default status `csi_status = "pending"` for every new record
+    - Adds creation timestamp and fetches current process activity status
+    - Returns the complete created case with all fields
 
-    === Insertable Fields ===
-    You can provide values for any of the following fields:
+    === Key Fields ===
+    You can provide values for any of the following fields (and many others):
     
-    sold_to_code, sold_to_comp_name, sold_to_comp_add1, sold_to_comp_add2, sold_to_comp_add3, sold_to_comp_add4,
-    source_country, sourcing_cluster, ship_to_code, ship_to_comp1_name, ship_to_comp1_add1, ship_to_comp1_add2,
-    ship_to_comp1_add3, ship_to_comp1_add4, payment_term, customer_segment, bdm_name, bdm_email,
-    customer_service_name, customer_service_email, consignee, notify_party, notify_name, notify_add1, notify_add2,
-    notify_add3, notify_add4, notify_attention_to1, notify_email, port_of_destination, bl_terminal,
-    bl_container_yard, bl_attention_to, freight_status, incoterm_1, origin_charges, freight_charges,
-    destination_charges, appointed_carrier_name, appointed_carrier_add1, appointed_carrier_add2,
-    appointed_carrier_add3, appointed_carrier_add4, fcl, lcl, invoice_unsigned, invoice_signed_and_hc,
-    invoice_sicc_endorsed, invoice_signed_legalized, invoice_special_instructions, packinglist_unsigned_uapl_sc,
-    packinglist_signed_uapl_sc, factory_packing_list, airway_bill, bill_of_lading, bol_special_instructions,
-    booking_confirm_carrier, proforma_invoice, mfg_date, exp_date, batch_code, delivery_notes, shelf_life_hpc,
-    shelf_life_foods, shelf_life_icecream, insurance_certificate, product_type, coo_manual, coo_sicc,
-    coo_dispatchcountry, form_ak_korea, form_vk_korea, form_ai_india, form_d_sea, form_aanz_australia,
-    form_e_china, eur1_europe, form_1, form_2, form_sadc, form_chafta, form_comesa, form_usmca, noaa_form,
-    form_cepa, form_safta, form_ind_aus_ecta, form_cafta, form_kafta, form_a_ukfta, certificate_of_quality,
-    health_certificate, halal_certificate, dg_certificate, fumigation_certificate, isf_certificate,
-    annual_packing_declaration, certificate_of_analysis, certificate_of_confirmity, saso_coc, aqis, ex188,
-    bacterial_examination, manufacture_declaration, quarantine_declaration, stuffing_rpt_load_sheet,
-    dairy_egg_declaration, ice_declaration, msds, sales_contract, vessel_certificate, tsca_certificate,
-    t1_certificate, europe_health_certificate, phytosanitary_certificate, free_sales_certificate,
-    radioactivity_certificate, cnca_certificate, gsp_certificate, ectn_document, bill_of_exports,
-    additional_document_1, additional_document_2, additional_document_3, order_submission, inv_doc,
-    mail_comp_name, mail_comp_add1, mail_comp_add2, mail_comp_add3, mail_comp_add4, postal_code,
-    prebooking_required, delivery_time_slot, delivery_days, max_trips_per_day, docs_needed_upon_delivery,
-    other_specify, packing_instruction, pallet_type, pallet_dimension, specific_packing_instru,
-    preloading_photos, shipping_mark_on_pallet, create_date, modify_date, csi_status, page
+    sold_to_code, sold_to_comp_name, ship_to_code, ship_to_comp1_name,
+    source_country, customer_segment, bdm_name, bdm_email,
+    customer_service_email, consignee, notify_party, port_of_destination,
+    freight_status, incoterm_1, invoice_signed_and_hc, bill_of_lading,
+    insurance_certificate, product_type, packing_instruction
 
     === Returns ===
-    - A confirmation message like: `"Case opened with ID: csi-case-123456, should I proceed further."`
-    - On error, returns one of:
-        - `[CREATE ERROR] Validation error occurred.`
-        - `[CREATE ERROR] Case with this case_id already exists.`
-        - `[CREATE ERROR] An unexpected error occurred while creating the Case.`
+    - success: Boolean indicating if the operation succeeded
+    - message: Description of the result with the generated case_id
+    - case_id: The unique identifier for the created case
+    - data: The complete created case document
+    - error: Boolean indicating if an error occurred (only present on error)
 
     Example Usage:
-    Use this tool to create a new CSI record by supplying relevant shipment instruction details. You do not need to provide `_id`, `case_id`, or `csi_status`—these are handled automatically.
+    Use this tool to create a new draft CSI case. You do not need to provide `case_id`, `csi_status`,
+    `created_at`, or `process_activity` as these are handled automatically.
     """
     try:
-        data = inputs.model_dump()
-        result = create_cases(**data)
+        # Extract case data from inputs
+        case_data = inputs.model_dump()
+        
+        # Log the tool invocation
+        logging.info(f"[CREATE_CASE_TOOL] Creating new case with data: {json.dumps(case_data, default=str)}")
+        
+        # Call the underlying CRUD function
+        result = create_case(**case_data)
+        
+        # Log the result summary
+        if result.get("case_id"):
+            logging.info(f"[CREATE_CASE_TOOL] Successfully created case with ID: {result.get('case_id')}")
+        else:
+            logging.warning(f"[CREATE_CASE_TOOL] Creation result without case_id: {result}")
+        
         return result
     except ValidationError as e:
-        logging.error("Validation error in create_csi_tool: %s", e)
-        return "[CREATE ERROR] Validation error occurred."
+        # Log validation errors
+        logging.error(f"[CREATE_CASE_TOOL] Validation error: {str(e)}")
+        logging.error(traceback.format_exc())
+        
+        return {
+            "success": False,
+            "message": f"Validation error: {str(e)}",
+            "error": True
+        }
     except Exception as e:
-        logging.error("Error in create_csi_tool: %s", e)
-        return "[CREATE ERROR] An unexpected error occurred."
+        # Log any other exceptions
+        logging.error(f"[CREATE_CASE_TOOL] Error: {str(e)}")
+        logging.error(traceback.format_exc())
+        
+        return {
+            "success": False,
+            "message": f"Error creating case: {str(e)}",
+            "error": True
+        }
 create_cases_tool.name = "create_cases_tool"
 
 
 @tool
-def approve_cases_tool(inputs: CSIToolArgs) -> dict:
+def approve_case_tool(inputs: CSIToolArgs) -> dict:
     """
-    Approve CSI (Customer Shipment Instruction) records by updating their status and transferring them to the approved_csi collection.
+    Approve a CSI Case, changing its status to 'approved' and copying it to the approved_csi collection.
 
-    This tool filters CSI records based on provided input parameters, updates their `csi_status` to `"approved"`, and stores them into the `approved_csi` collection.
+    This tool transitions a draft/pending CSI case to an approved state by:
+    1. Updating its status to 'approved' in the cases collection
+    2. Adding an approval timestamp
+    3. Copying the complete record to the approved_csi collection (final/read-only state)
 
     === Capabilities ===
-    - Filters records using flexible field matching (same as `read_cases_tool`).
-    - Updates all matching CSI records with `csi_status = "approved"`.
-    - Uploads the updated documents to the `approved_csi` collection.
-    - Returns a message with the number of updated and uploaded records.
+    - Requires case_id to identify the specific case to approve
+    - Validates the case exists before approval
+    - Updates case status to "approved" with timestamp
+    - Creates a copy in the approved_csi collection (historical record)
+    - Returns both the updated case and the new approved_csi record
 
-    === Updatable Fields (used for filtering) ===
-    Use any of the valid CSI fields as filters to match the records that should be approved:
-    
-    sold_to_code, sold_to_comp_name, sold_to_comp_add1, sold_to_comp_add2, sold_to_comp_add3, sold_to_comp_add4,
-    source_country, sourcing_cluster, ship_to_code, ship_to_comp1_name, ship_to_comp1_add1, ship_to_comp1_add2,
-    ship_to_comp1_add3, ship_to_comp1_add4, payment_term, customer_segment, bdm_name, bdm_email,
-    customer_service_name, customer_service_email, consignee, notify_party, notify_name, notify_add1, notify_add2,
-    notify_add3, notify_add4, notify_attention_to1, notify_email, port_of_destination, bl_terminal,
-    bl_container_yard, bl_attention_to, freight_status, incoterm_1, origin_charges, freight_charges,
-    destination_charges, appointed_carrier_name, appointed_carrier_add1, appointed_carrier_add2,
-    appointed_carrier_add3, appointed_carrier_add4, fcl, lcl, invoice_unsigned, invoice_signed_and_hc,
-    invoice_sicc_endorsed, invoice_signed_legalized, invoice_special_instructions, packinglist_unsigned_uapl_sc,
-    packinglist_signed_uapl_sc, factory_packing_list, airway_bill, bill_of_lading, bol_special_instructions,
-    booking_confirm_carrier, proforma_invoice, mfg_date, exp_date, batch_code, delivery_notes, shelf_life_hpc,
-    shelf_life_foods, shelf_life_icecream, insurance_certificate, product_type, coo_manual, coo_sicc,
-    coo_dispatchcountry, form_ak_korea, form_vk_korea, form_ai_india, form_d_sea, form_aanz_australia,
-    form_e_china, eur1_europe, form_1, form_2, form_sadc, form_chafta, form_comesa, form_usmca, noaa_form,
-    form_cepa, form_safta, form_ind_aus_ecta, form_cafta, form_kafta, form_a_ukfta, certificate_of_quality,
-    health_certificate, halal_certificate, dg_certificate, fumigation_certificate, isf_certificate,
-    annual_packing_declaration, certificate_of_analysis, certificate_of_confirmity, saso_coc, aqis, ex188,
-    bacterial_examination, manufacture_declaration, quarantine_declaration, stuffing_rpt_load_sheet,
-    dairy_egg_declaration, ice_declaration, msds, sales_contract, vessel_certificate, tsca_certificate,
-    t1_certificate, europe_health_certificate, phytosanitary_certificate, free_sales_certificate,
-    radioactivity_certificate, cnca_certificate, gsp_certificate, ectn_document, bill_of_exports,
-    additional_document_1, additional_document_2, additional_document_3, order_submission, inv_doc,
-    mail_comp_name, mail_comp_add1, mail_comp_add2, mail_comp_add3, mail_comp_add4, postal_code,
-    prebooking_required, delivery_time_slot, delivery_days, max_trips_per_day, docs_needed_upon_delivery,
-    other_specify, packing_instruction, pallet_type, pallet_dimension, specific_packing_instru,
-    preloading_photos, shipping_mark_on_pallet, create_date, modify_date, csi_status, page
+    === Required Parameters ===
+    - case_id: The unique identifier of the case to approve (format: CSI-XXXXXXXX)
 
     === Returns ===
-    - A success message indicating how many cases were approved and moved.
-    - A list of approved CSI documents (with `_id` removed).
-    - In case of failure, returns an appropriate error message.
+    - success: Boolean indicating if the operation succeeded
+    - message: Description of the approval result
+    - data: The approved case document
+    - error: Boolean indicating if an error occurred (only present on error)
 
     Example Usage:
-    Use this tool to bulk-approve CSI records that match any filtering criteria. All approved cases will be updated in the CSI collection and inserted into the `approved_csi` collection.
+    Use this tool to approve a specific CSI case that has been reviewed and is ready for final approval.
+    This moves the case to approved status and creates a historical record in the approved_csi collection.
     """
     try:
-        data = {k: v for k, v in inputs.model_dump().items() if v not in ("", None)}
-        print(f"[CSI APPROVE TOOL] Called with inputs={data}")
-        result = approve_cases(**data)
-        print(f"[CSI APPROVE TOOL] Result: {result}")
+        # Extract case_id from inputs
+        data = inputs.model_dump()
+        case_id = data.get('case_id')
+        
+        if not case_id:
+            return {
+                "success": False,
+                "message": "Error: case_id is required for approval",
+                "error": True
+            }
+        
+        # Log the tool invocation
+        logging.info(f"[APPROVE_CASE_TOOL] Approving case with ID: {case_id}")
+        
+        # Call the underlying CRUD function
+        result = approve_case(case_id=case_id)
+        
+        # Log the result summary
+        if result.get("success", False):
+            logging.info(f"[APPROVE_CASE_TOOL] Successfully approved case: {case_id}")
+        else:
+            logging.warning(f"[APPROVE_CASE_TOOL] Failed to approve case: {case_id}. {result.get('message')}")
+        
         return result
     except ValidationError as e:
-        logging.error("Validation error in approve_cases_tool: %s", e)
-        return {"error": True, "message": "[APPROVE ERROR] Validation error occurred."}
+        # Log validation errors
+        logging.error(f"[APPROVE_CASE_TOOL] Validation error: {str(e)}")
+        logging.error(traceback.format_exc())
+        
+        return {
+            "success": False,
+            "message": f"Validation error: {str(e)}",
+            "error": True
+        }
     except Exception as e:
-        logging.error("Unexpected error in approve_cases_tool: %s", e)
-        return {"error": True, "message": "[APPROVE ERROR] An unexpected error occurred."}
+        # Log any other exceptions
+        logging.error(f"[APPROVE_CASE_TOOL] Error: {str(e)}")
+        logging.error(traceback.format_exc())
+        
+        return {
+            "success": False,
+            "message": f"Error approving case: {str(e)}",
+            "error": True
+        }
 
 
-approve_cases_tool.name = "csi_approve_tool"
+approve_case_tool.name = "approve_case_tool"
 
 from langchain_core.tools import tool
 from crud.cases_crud import update_case
@@ -208,106 +253,263 @@ import logging
 
 
 @tool
-def update_cases_tool(inputs: CSIToolArgs) -> dict:
+def update_case_tool(inputs: UpdateCaseArgs) -> dict:
     """
-    Update CSI (Customer Shipment Instruction) records by specifying filter (query) fields 
-    and fields to update separately.
+    Update a CSI Case (draft/pending Customer Shipment Instruction record) in the database.
+
+    This tool updates records in the 'cases' collection which contains draft/pending CSI records.
+    It uses a two-part structure with query_fields to identify the case and update_fields to specify changes.
 
     === Capabilities ===
-    - Filter fields (`query_fields`) are used to locate a matching CSI record.
-    - Update fields (`update_fields`) are used to change values in the matched record.
-    - Fields used for filtering will NOT be updated.
-    - Supports partial updates — only provide fields you wish to query or change.
-    - Skips empty or null fields automatically.
+    - Uses query_fields to identify which case(s) to update
+    - Applies update_fields to modify the matched case(s)
+    - Supports flexible querying with regex for string fields
+    - Automatically adds modification timestamp
+    - Returns the updated case document
+    - Skips empty or null fields automatically
+    - Adds modification timestamp automatically
 
     === Input Structure ===
     {
-        "query_fields": { ... },   # Filters to locate the record
+        "query_fields": { ... },   # Fields to identify the case to update
         "update_fields": { ... }   # Fields and values to update
     }
 
     === Filterable & Updatable Fields ===
     You can use any CSI field for both filtering and updating, including:
-    sold_to_code, customer_segment, bdm_email, consignee, invoice_signed_legalized, etc.
+    case_id, sold_to_code, customer_segment, bdm_email, ship_to_code, etc.
 
     === Returns ===
-    - `"Case updated successfully."` + the updated record.
-    - `"No matching Case found. Update not performed."` if nothing matches.
-    - `"No changes made to the Case."` if no actual update occurs.
-    - `[UPDATE ERROR]` messages on exception.
+    - success: Boolean indicating if the operation succeeded
+    - message: Description of the update result
+    - data: The updated case document (if successful)
+    - error: Boolean indicating if an error occurred (only present on error)
+
+    Example Usage:
+    Use this tool to update specific fields in a draft CSI case while keeping other fields unchanged.
+    This is useful for correcting information or adding additional details to an existing case.
     """
 
     try:
-        query_fields = {
-            k: v for k, v in inputs.get("query_fields", {}).items() if v not in ("", None)
-        }
-        update_fields = {
-            k: v for k, v in inputs.get("update_fields", {}).items() if v not in ("", None)
-        }
+        # Extract query and update fields
+        query_fields = inputs.query_fields
+        update_fields = inputs.update_fields
+        
+        # Filter out empty values
+        query_fields = {k: v for k, v in query_fields.items() if v not in ("", None)}
+        update_fields = {k: v for k, v in update_fields.items() if v not in ("", None)}
 
         if not query_fields or not update_fields:
             return {
-                "error": True,
-                "message": "Both 'query_fields' and 'update_fields' must be provided and non-empty."
+                "success": False,
+                "message": "Both 'query_fields' and 'update_fields' must be provided and non-empty.",
+                "error": True
             }
 
-        print(f"[CSI UPDATE TOOL] Query: {query_fields}")
-        print(f"[CSI UPDATE TOOL] Update: {update_fields}")
+        # Log the tool invocation
+        logging.info(f"[UPDATE_CASE_TOOL] Updating case with query: {json.dumps(query_fields, default=str)}")
+        logging.info(f"[UPDATE_CASE_TOOL] Update fields: {json.dumps(update_fields, default=str)}")
+        
+        # Call the underlying CRUD function
         result = update_case(query_fields=query_fields, update_fields=update_fields)
-        print(f"[CSI UPDATE TOOL] Result: {result}")
+        
+        # Log the result summary
+        if result.get("success", False):
+            logging.info(f"[UPDATE_CASE_TOOL] Successfully updated case matching: {json.dumps(query_fields, default=str)}")
+        else:
+            logging.warning(f"[UPDATE_CASE_TOOL] Failed to update case: {result.get('message')}")
+        
         return result
-
     except ValidationError as e:
-        logging.error("Validation error in update_cases_tool: %s", e)
-        return {"error": True, "message": "[UPDATE ERROR] Validation error occurred."}
+        # Log validation errors
+        logging.error(f"[UPDATE_CASE_TOOL] Validation error: {str(e)}")
+        logging.error(traceback.format_exc())
+        
+        return {
+            "success": False,
+            "message": f"Validation error: {str(e)}",
+            "error": True
+        }
     except Exception as e:
-        logging.error("Unexpected error in update_cases_tool: %s", e)
-        return {"error": True, "message": "[UPDATE ERROR] An unexpected error occurred."}
+        # Log any other exceptions
+        logging.error(f"[UPDATE_CASE_TOOL] Error: {str(e)}")
+        logging.error(traceback.format_exc())
+        
+        return {
+            "success": False,
+            "message": f"Error updating case: {str(e)}",
+            "error": True
+        }
 
 
 
 @tool
-def approve_cases_tool(inputs: CSIToolArgs) -> dict:
+def delete_case_tool(inputs: DeleteCaseArgs) -> dict:
     """
-    Approve CSI (Customer Shipment Instruction) records based on provided filters.
-
-    This tool identifies CSI records using any combination of CSI fields and marks them as approved.
-    Approved records are copied into a separate collection and their status is updated in the original collection.
-
+    Delete a CSI Case (draft/pending Customer Shipment Instruction record) from the database.
+    
+    This tool removes records from the 'cases' collection which contains draft/pending CSI records.
+    It uses query_fields to identify which case(s) to delete.
+    
     === Capabilities ===
-    - Uses flexible filters to identify matching CSI records.
-    - Adds approved records into the `approved_csi` collection (excluding `_id` to prevent duplication).
-    - Updates the `csi_status` of matching records to `"approved"` in the original collection.
-    - Handles ObjectId conversion when `_id` or `id` is provided.
-    - Returns a message along with the approved records.
-
+    - Uses query_fields to identify which case(s) to delete
+    - Supports flexible querying with regex for string fields
+    - Returns information about the deleted case(s)
+    - Provides detailed error messages if deletion fails
+    
+    === Input Structure ===
+    {
+        "query_fields": { ... }   # Fields to identify the case(s) to delete
+    }
+    
     === Filterable Fields ===
-    You can use any field from the CSI schema as a filter, including but not limited to:
-
-    sold_to_code, ship_to_code, source_country, customer_service_name, bdm_email, vessel_certificate, 
-    invoice_signed_and_hc, bl_terminal, prebooking_required, csi_status, create_date, etc.
-
+    You can use any CSI field for filtering, including:
+    case_id, sold_to_code, customer_segment, bdm_email, ship_to_code, etc.
+    
     === Returns ===
-    - `"Approved X case(s)."` with list of approved cases.
-    - `"No matching CSI Cases found to approve."` if no match found.
-    - `[APPROVE ERROR]` messages on exception.
-
+    - success: Boolean indicating if the operation succeeded
+    - message: Description of the deletion result with count of deleted records
+    - data: Information about the deleted case(s) if available
+    - error: Boolean indicating if an error occurred (only present on error)
+    
     Example Usage:
-    Use this tool when you want to approve matching CSI records by providing relevant filter fields.
+    Use this tool to delete draft CSI cases that are no longer needed.
+    This operation cannot be undone, so use it carefully.
     """
-
+    
     try:
-        data = {k: v for k, v in inputs.model_dump().items() if v not in ("", None)}
-        print(f"[CSI APPROVE TOOL] Called with inputs={data}")
-        result = approve_cases(**data)
-        print(f"[CSI APPROVE TOOL] Result: {result}")
+        # Extract query fields
+        query_fields = inputs.query_fields
+        
+        # Filter out empty values
+        query_fields = {k: v for k, v in query_fields.items() if v not in ("", None)}
+        
+        if not query_fields:
+            return {
+                "success": False,
+                "message": "Query fields must be provided and non-empty.",
+                "error": True
+            }
+        
+        # Log the tool invocation
+        logging.info(f"[DELETE_CASE_TOOL] Deleting case with query: {json.dumps(query_fields, default=str)}")
+        
+        # Call the underlying CRUD function
+        result = delete_case(query_fields=query_fields)
+        
+        # Log the result summary
+        if result.get("success", False):
+            logging.info(f"[DELETE_CASE_TOOL] Successfully deleted case(s) matching: {json.dumps(query_fields, default=str)}")
+        else:
+            logging.warning(f"[DELETE_CASE_TOOL] Failed to delete case: {result.get('message')}")
+        
         return result
     except ValidationError as e:
-        logging.error("Validation error in approve_cases_tool: %s", e)
-        return {"error": True, "message": "[APPROVE ERROR] Validation error occurred."}
+        # Log validation errors
+        logging.error(f"[DELETE_CASE_TOOL] Validation error: {str(e)}")
+        logging.error(traceback.format_exc())
+        
+        return {
+            "success": False,
+            "message": f"Validation error: {str(e)}",
+            "error": True
+        }
     except Exception as e:
-        logging.error("Unexpected error in approve_cases_tool: %s", e)
-        return {"error": True, "message": "[APPROVE ERROR] An unexpected error occurred."}
+        # Log any other exceptions
+        logging.error(f"[DELETE_CASE_TOOL] Error: {str(e)}")
+        logging.error(traceback.format_exc())
+        
+        return {
+            "success": False,
+            "message": f"Error deleting case: {str(e)}",
+            "error": True
+        }
 
 
-approve_cases_tool.name = "approve_cases_tool"
+delete_case_tool.name = "delete_case_tool"
+
+
+@tool
+def read_approved_csi_tool(inputs: CSIToolArgs) -> dict:
+    """
+    Retrieve Approved CSI records (final/read-only Customer Shipment Instruction records) from the database.
+    
+    This tool searches the 'approved_csi' collection which contains final approved CSI records.
+    For draft/pending CSI records that have not yet been approved, use the read_cases_tool instead.
+    
+    === Capabilities ===
+    - Supports full-text, case-insensitive search on string fields
+    - Accepts MongoDB ObjectId (`id` or `_id`) when provided
+    - Filters only non-empty fields automatically
+    - Paginates results using the `page` parameter (default: 1)
+    - Returns a structured response with status, message, and data fields
+    
+    === Filterable Fields ===
+    You can provide any of the following fields as filters:
+    
+    case_id, sold_to_code, sold_to_comp_name, ship_to_code, ship_to_comp1_name, 
+    source_country, customer_segment, bdm_name, bdm_email, customer_service_email,
+    consignee, notify_party, port_of_destination, freight_status, incoterm_1,
+    invoice_signed_and_hc, bill_of_lading, insurance_certificate, product_type,
+    packing_instruction, csi_status, created_at, modified_at, approved_at, process_activity
+    
+    === Returns ===
+    - success: Boolean indicating if the operation succeeded
+    - message: Description of the result with count of matching records
+    - data: Array of matching approved CSI records (with `_id` removed)
+    - error: Boolean indicating if an error occurred (only present on error)
+    
+    Example Usage:
+    Use this tool to search for historical approved CSI records that have completed the approval process.
+    These records are read-only and represent the final state of each CSI case.
+    """
+    
+    try:
+        # Extract fields from inputs
+        fields = inputs.model_dump()
+        
+        # Extract page parameter if present, default to 1
+        page = fields.pop('page', 1) if isinstance(fields, dict) else 1
+        
+        # Filter out empty values
+        if isinstance(fields, dict):
+            fields = {k: v for k, v in fields.items() if v not in ("", None)}
+        
+        # Log the tool invocation
+        logging.info(f"[READ_APPROVED_CSI_TOOL] Searching approved CSI with filters: {json.dumps(fields, default=str)}")
+        
+        # Call the underlying CRUD function
+        result = read_approved_csi(page=page, **fields)
+        
+        # Add success flag for consistency
+        if "error" not in result:
+            result["success"] = True
+        
+        # Log the result summary
+        record_count = len(result.get("data", []))
+        logging.info(f"[READ_APPROVED_CSI_TOOL] Found {record_count} approved CSI records")
+        
+        return result
+    except ValidationError as e:
+        # Log validation errors
+        logging.error(f"[READ_APPROVED_CSI_TOOL] Validation error: {str(e)}")
+        logging.error(traceback.format_exc())
+        
+        return {
+            "success": False,
+            "message": f"Validation error: {str(e)}",
+            "error": True
+        }
+    except Exception as e:
+        # Log any other exceptions
+        logging.error(f"[READ_APPROVED_CSI_TOOL] Error: {str(e)}")
+        logging.error(traceback.format_exc())
+        
+        return {
+            "success": False,
+            "message": f"Error reading approved CSI records: {str(e)}",
+            "error": True
+        }
+
+
+read_approved_csi_tool.name = "read_approved_csi_tool"

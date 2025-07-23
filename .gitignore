@@ -5,3 +5,4 @@ lib
 lib64
 include
 .env
+groq_api_key.txt
