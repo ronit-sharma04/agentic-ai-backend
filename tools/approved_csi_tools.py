@@ -1,8 +1,9 @@
 from langchain_core.tools import tool
-from crud.approved_csi_crud import find_in_approved_csi_collection
+from crud.approved_csi_crud import read_approved_csi
 from pydantic import ValidationError
 from tools.cases_args import CSIToolArgs
 import logging
+import traceback
 
 
 @tool
@@ -64,3 +65,51 @@ def read_approved_csi_tool(inputs: CSIToolArgs) -> dict:
     return result
 
 read_approved_csi_tool.name = "approved_csi_read_tool"
+
+
+@tool
+def get_latest_approved_csi_tool(inputs: CSIToolArgs) -> dict:
+    """
+    Get the latest/newest approved CSI records based on creation timestamp.
+    Useful when user asks for "latest approved CSI", "newest approved CSI", "recently approved CSI", etc.
+    
+    Args:
+        inputs: Tool arguments (can include limit parameter, defaults to 2)
+        
+    Returns:
+        dict: Contains status, message, and data with latest approved CSI records
+    """
+    logging.info(f"[GET_LATEST_APPROVED_CSI_TOOL] Raw inputs received: {inputs}")
+    
+    try:
+        # Extract limit parameter, default to 2
+        dumped_data = inputs.model_dump()
+        logging.info(f"[GET_LATEST_APPROVED_CSI_TOOL] Dumped data: {dumped_data}")
+        
+        limit = dumped_data.get('limit', 2)
+        if not isinstance(limit, int) or limit <= 0:
+            limit = 2
+            
+        logging.info(f"[GET_LATEST_APPROVED_CSI_TOOL] Getting latest approved CSI with limit: {limit}")
+        
+        from crud.approved_csi_crud import get_latest_approved_csi
+        result = get_latest_approved_csi(limit=limit)
+        
+        if result.get('status') == 'success':
+            logging.info(f"[GET_LATEST_APPROVED_CSI_TOOL] Successfully retrieved {len(result.get('data', []))} latest approved CSI records")
+        else:
+            logging.error(f"[GET_LATEST_APPROVED_CSI_TOOL] Failed to retrieve latest approved CSI: {result.get('message')}")
+            
+        return result
+        
+    except Exception as e:
+        logging.error(f"[GET_LATEST_APPROVED_CSI_TOOL] Exception: {e}")
+        logging.error(traceback.format_exc())
+        return {
+            "status": "error",
+            "message": f"Error retrieving latest approved CSI records: {str(e)}",
+            "data": []
+        }
+
+get_latest_approved_csi_tool.name = "get_latest_approved_csi_tool"
+get_latest_approved_csi_tool.description = "Get the latest/newest approved CSI records based on creation timestamp. Returns top 2 records by default."

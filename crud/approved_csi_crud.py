@@ -8,6 +8,28 @@ import traceback
 
 COLLECTION = "approved_csi"
 
+def filter_timestamp_fields(data):
+    """
+    Remove timestamp fields from data to return only relevant business data.
+    
+    Args:
+        data: Single dict or list of dicts containing approved CSI data
+        
+    Returns:
+        Filtered data without timestamp fields
+    """
+    timestamp_fields = {'created_at', 'modified_at', 'approved_at', 'create_date', 'modify_date'}
+    
+    def filter_single_record(record):
+        if isinstance(record, dict):
+            return {k: v for k, v in record.items() if k not in timestamp_fields}
+        return record
+    
+    if isinstance(data, list):
+        return [filter_single_record(record) for record in data]
+    else:
+        return filter_single_record(data)
+
 def read_approved_csi(page: int = 1, **kwargs) -> dict:
     """
     Read approved CSI records from the database based on provided filters.
@@ -71,9 +93,12 @@ def read_approved_csi(page: int = 1, **kwargs) -> dict:
             {k: v for k, v in doc.items() if v not in (None, "", [], {}, ())}
             for doc in docs
         ]
+        
+        # Filter out timestamp fields from response data
+        filtered_docs = filter_timestamp_fields(cleaned_docs)
 
-        message = f"{total_count} Approved CSI Records found. Showing page {page} with {len(cleaned_docs)} records."
-        return {"status": "success", "message": message, "data": cleaned_docs}
+        message = f"{total_count} Approved CSI Records found. Showing page {page} with {len(filtered_docs)} records."
+        return {"status": "success", "message": message, "data": filtered_docs}
 
     except PyMongoError as e:
         print(f"[APPROVED_CSI READ ERROR] PyMongoError: {e}")
@@ -82,7 +107,60 @@ def read_approved_csi(page: int = 1, **kwargs) -> dict:
     except Exception as e:
         print(f"[APPROVED_CSI READ ERROR] Exception: {e}")
         traceback.print_exc()
-        return {"status": "error", "message": "An unexpected error occurred during the operation.", "data": []}
+        return {"status": "error", "message": f"An unexpected error occurred: {str(e)}", "data": []}
+
+
+def get_latest_approved_csi(limit: int = 2) -> dict:
+    """
+    Get the latest/newest approved CSI records based on created_at timestamp.
+    
+    Args:
+        limit: Number of latest approved CSI records to return (default: 2)
+        
+    Returns:
+        dict: Contains success, message, and data with latest approved CSI records
+    """
+    print(f"[GET LATEST APPROVED CSI] Called with limit: {limit}")
+    try:
+        db = get_db_connection(COLLECTION)
+        print("[GET LATEST APPROVED CSI] Got DB connection")
+        coll = db[COLLECTION]
+        
+        # Query for latest approved CSI records sorted by created_at descending
+        cursor = coll.find({}).sort("created_at", -1).limit(limit)
+        approved_csi_records = list(cursor)
+        
+        if not approved_csi_records:
+            print("[GET LATEST APPROVED CSI] No approved CSI records found")
+            return {
+                "status": "success",
+                "message": "No approved CSI records found in the database.",
+                "data": []
+            }
+        
+        # Remove MongoDB _id from results
+        for record in approved_csi_records:
+            record.pop("_id", None)
+        
+        # Filter out timestamp fields from response data
+        filtered_records = filter_timestamp_fields(approved_csi_records)
+        
+        print(f"[GET LATEST APPROVED CSI] Found {len(filtered_records)} latest approved CSI records")
+        return {
+            "status": "success",
+            "message": f"Found {len(filtered_records)} latest approved CSI records.",
+            "data": filtered_records
+        }
+        
+    except PyMongoError as e:
+        print(f"[GET LATEST APPROVED CSI ERROR] PyMongoError: {e}")
+        print(traceback.format_exc())
+        return {"status": "error", "message": f"Database error: {str(e)}", "data": []}
+    except Exception as e:
+        print(f"[GET LATEST APPROVED CSI ERROR] Exception: {e}")
+        print(traceback.format_exc())
+        return {"status": "error", "message": f"An unexpected error occurred: {str(e)}", "data": []}
+
 
 def create_approved_csi(**kwargs) -> dict:
     """
@@ -117,11 +195,14 @@ def create_approved_csi(**kwargs) -> dict:
 
         # Retrieve the inserted document (excluding Mongo _id)
         inserted_doc = coll.find_one({"_id": result.inserted_id}, {"_id": 0})
+        
+        # Filter out timestamp fields from response data
+        filtered_doc = filter_timestamp_fields(inserted_doc)
 
         return {
             "status": "success",
             "message": "Approved CSI Record created successfully",
-            "data": inserted_doc
+            "data": filtered_doc
         }
 
     except DuplicateKeyError:
@@ -199,7 +280,11 @@ def update_approved_csi(query_fields: dict, update_fields: dict) -> dict:
         result = coll.update_one({"_id": existing_doc["_id"]}, {"$set": update_fields})
         if result.modified_count > 0:
             updated_doc = coll.find_one({"_id": existing_doc["_id"]}, {"_id": 0})
-            return {"status": "success", "message": "Approved CSI Record updated successfully.", "data": updated_doc}
+            
+            # Filter out timestamp fields from response data
+            filtered_doc = filter_timestamp_fields(updated_doc)
+            
+            return {"status": "success", "message": "Approved CSI Record updated successfully.", "data": filtered_doc}
         else:
             return {"status": "warning", "message": "No changes made to the Approved CSI Record.", "data": {}}
 

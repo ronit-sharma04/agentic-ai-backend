@@ -10,15 +10,16 @@ import json
 # Define Pydantic models for tool inputs
 class CSIToolArgs(BaseModel, extra="allow"):
     """Arguments for CSI tools with flexible field support"""
-    def model_dump(self):
-        # Return all fields except private ones
-        return {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
+    pass
 
 
 class UpdateCaseArgs(BaseModel):
-    """Arguments for update case tool"""
-    query_fields: Dict[str, Any] = Field(..., description="Fields to identify the case to update")
-    update_fields: Dict[str, Any] = Field(..., description="Fields to update in the case")
+    """Arguments for update case tool with enhanced flexibility"""
+    query_fields: Optional[Dict[str, Any]] = Field(None, description="Fields to identify the case to update")
+    update_fields: Optional[Dict[str, Any]] = Field(None, description="Fields to update in the case")
+    
+    class Config:
+        extra = "allow"  # Allow additional fields for flexible parameter passing
 
 class DeleteCaseArgs(BaseModel):
     """Arguments for delete case tool"""
@@ -199,9 +200,20 @@ def approve_case_tool(inputs: CSIToolArgs) -> dict:
     try:
         # Extract case_id from inputs
         data = inputs.model_dump()
+        logging.info(f"[APPROVE_CASE_TOOL] Raw inputs received: {inputs}")
+        logging.info(f"[APPROVE_CASE_TOOL] Dumped data: {data}")
+        
         case_id = data.get('case_id')
         
+        # Try alternative field names if case_id is not found
         if not case_id:
+            # Check for common variations
+            case_id = data.get('id') or data.get('caseId') or data.get('case') or data.get('csi_case_id')
+            if case_id:
+                logging.info(f"[APPROVE_CASE_TOOL] Found case_id in alternative field: {case_id}")
+        
+        if not case_id:
+            logging.error(f"[APPROVE_CASE_TOOL] No case_id found in data: {data}")
             return {
                 "success": False,
                 "message": "Error: case_id is required for approval",
@@ -244,82 +256,162 @@ def approve_case_tool(inputs: CSIToolArgs) -> dict:
 
 
 approve_case_tool.name = "approve_case_tool"
+approve_case_tool.description = "Approve a CSI case and move it to the approved_csi collection. Requires case_id parameter."
 
-from langchain_core.tools import tool
-from crud.cases_crud import update_case
-from pydantic import ValidationError
-from tools.cases_args import CSIToolArgs
-import logging
+
+@tool
+def get_latest_cases_tool(inputs: CSIToolArgs) -> dict:
+    """
+    Get the latest/newest CSI cases based on creation timestamp.
+    Useful when user asks for "latest cases", "newest cases", "recently created cases", etc.
+    
+    Args:
+        inputs: Tool arguments (can include limit parameter, defaults to 2)
+        
+    Returns:
+        dict: Contains success status, message, and data with latest cases
+    """
+    logging.info(f"[GET_LATEST_CASES_TOOL] Raw inputs received: {inputs}")
+    
+    try:
+        # Extract limit parameter, default to 2
+        dumped_data = inputs.model_dump()
+        logging.info(f"[GET_LATEST_CASES_TOOL] Dumped data: {dumped_data}")
+        
+        limit = dumped_data.get('limit', 2)
+        if not isinstance(limit, int) or limit <= 0:
+            limit = 2
+            
+        logging.info(f"[GET_LATEST_CASES_TOOL] Getting latest cases with limit: {limit}")
+        
+        from crud.cases_crud import get_latest_cases
+        result = get_latest_cases(limit=limit)
+        
+        if result.get('success'):
+            logging.info(f"[GET_LATEST_CASES_TOOL] Successfully retrieved {len(result.get('data', []))} latest cases")
+        else:
+            logging.error(f"[GET_LATEST_CASES_TOOL] Failed to retrieve latest cases: {result.get('message')}")
+            
+        return result
+        
+    except Exception as e:
+        logging.error(f"[GET_LATEST_CASES_TOOL] Exception: {e}")
+        logging.error(traceback.format_exc())
+        return {
+            "success": False,
+            "message": f"Error retrieving latest cases: {str(e)}",
+            "data": []
+        }
+
+get_latest_cases_tool.name = "get_latest_cases_tool"
+get_latest_cases_tool.description = "Get the latest/newest CSI cases based on creation timestamp. Returns top 2 records by default."
 
 
 @tool
 def update_case_tool(inputs: UpdateCaseArgs) -> dict:
     """
-    Update a CSI Case (draft/pending Customer Shipment Instruction record) in the database.
+    Update a CSI Case (draft/pending Customer Shipment Instruction record) with maximum flexibility.
 
     This tool updates records in the 'cases' collection which contains draft/pending CSI records.
-    It uses a two-part structure with query_fields to identify the case and update_fields to specify changes.
+    It supports multiple input methods for maximum flexibility and ease of use.
 
-    === Capabilities ===
-    - Uses query_fields to identify which case(s) to update
-    - Applies update_fields to modify the matched case(s)
-    - Supports flexible querying with regex for string fields
-    - Automatically adds modification timestamp
-    - Returns the updated case document
-    - Skips empty or null fields automatically
-    - Adds modification timestamp automatically
+    === Enhanced Capabilities ===
+    - Multiple input methods: separate dictionaries, prefixed kwargs, or mixed approach
+    - Smart query building with exact match for identifiers and regex for text fields
+    - Automatic empty field filtering and timestamp management
+    - Detailed error messages with field-specific information
+    - Returns cleaned, formatted response data
+    - Comprehensive logging for debugging and monitoring
 
-    === Input Structure ===
+    === Input Methods ===
+    Method 1 - Separate dictionaries:
     {
-        "query_fields": { ... },   # Fields to identify the case to update
-        "update_fields": { ... }   # Fields and values to update
+        "query_fields": {"case_id": "CSI-123"},
+        "update_fields": {"customer_name": "John Doe", "bdm_email": "john@company.com"}
+    }
+    
+    Method 2 - Prefixed fields (passed as additional properties):
+    {
+        "query_case_id": "CSI-123",
+        "update_customer_name": "John Doe",
+        "update_bdm_email": "john@company.com"
+    }
+    
+    Method 3 - Mixed approach:
+    {
+        "query_fields": {"case_id": "CSI-123"},
+        "update_customer_name": "John Doe",
+        "update_bdm_email": "john@company.com"
     }
 
-    === Filterable & Updatable Fields ===
-    You can use any CSI field for both filtering and updating, including:
-    case_id, sold_to_code, customer_segment, bdm_email, ship_to_code, etc.
+    === Supported Fields ===
+    All CSI fields can be used for both querying and updating:
+    case_id, sold_to_code, sold_to_comp_name, ship_to_code, ship_to_comp1_name,
+    source_country, customer_segment, bdm_name, bdm_email, customer_service_email,
+    consignee, notify_party, port_of_destination, freight_status, incoterm_1,
+    invoice_signed_and_hc, bill_of_lading, insurance_certificate, product_type,
+    packing_instruction, csi_status, and more.
 
     === Returns ===
-    - success: Boolean indicating if the operation succeeded
-    - message: Description of the update result
-    - data: The updated case document (if successful)
-    - error: Boolean indicating if an error occurred (only present on error)
+    - status: "success", "warning", or "error"
+    - message: Detailed description of the operation result
+    - data: The updated case document (cleaned of empty fields)
 
     Example Usage:
-    Use this tool to update specific fields in a draft CSI case while keeping other fields unchanged.
-    This is useful for correcting information or adding additional details to an existing case.
+    Use this tool to update any combination of fields in a draft CSI case.
+    The tool automatically handles field validation, timestamp updates, and response formatting.
     """
 
     try:
-        # Extract query and update fields
-        query_fields = inputs.query_fields
-        update_fields = inputs.update_fields
+        # Extract all input data
+        input_dict = inputs.model_dump() if hasattr(inputs, 'model_dump') else inputs.__dict__
         
-        # Filter out empty values
-        query_fields = {k: v for k, v in query_fields.items() if v not in ("", None)}
-        update_fields = {k: v for k, v in update_fields.items() if v not in ("", None)}
-
-        if not query_fields or not update_fields:
+        # Get explicit query and update fields
+        query_fields = input_dict.get('query_fields') or {}
+        update_fields = input_dict.get('update_fields') or {}
+        
+        # Collect additional kwargs for flexible parameter passing
+        additional_kwargs = {}
+        for k, v in input_dict.items():
+            if k not in ['query_fields', 'update_fields'] and v is not None and v != "":
+                additional_kwargs[k] = v
+        
+        # Log the tool invocation
+        logging.info(f"[UPDATE_CASE_TOOL] Query fields: {json.dumps(query_fields, default=str)}")
+        logging.info(f"[UPDATE_CASE_TOOL] Update fields: {json.dumps(update_fields, default=str)}")
+        logging.info(f"[UPDATE_CASE_TOOL] Additional kwargs: {json.dumps(additional_kwargs, default=str)}")
+        
+        # Call the enhanced CRUD function with all parameters
+        result = update_case(
+            query_fields=query_fields if query_fields else None,
+            update_fields=update_fields if update_fields else None,
+            **additional_kwargs
+        )
+        
+        # Transform result to match expected tool response format
+        if result.get("status") == "success":
+            logging.info(f"[UPDATE_CASE_TOOL] Successfully updated case: {result.get('message')}")
+            return {
+                "success": True,
+                "message": result.get("message", "Case updated successfully."),
+                "data": result.get("data", {})
+            }
+        elif result.get("status") == "warning":
+            logging.warning(f"[UPDATE_CASE_TOOL] Update warning: {result.get('message')}")
+            return {
+                "success": True,
+                "message": result.get("message", "No changes made to the case."),
+                "data": result.get("data", {})
+            }
+        else:
+            logging.error(f"[UPDATE_CASE_TOOL] Update failed: {result.get('message')}")
             return {
                 "success": False,
-                "message": "Both 'query_fields' and 'update_fields' must be provided and non-empty.",
-                "error": True
+                "message": result.get("message", "Failed to update case."),
+                "error": True,
+                "data": result.get("data", [])
             }
-
-        # Log the tool invocation
-        logging.info(f"[UPDATE_CASE_TOOL] Updating case with query: {json.dumps(query_fields, default=str)}")
-        logging.info(f"[UPDATE_CASE_TOOL] Update fields: {json.dumps(update_fields, default=str)}")
         
-        # Call the underlying CRUD function
-        result = update_case(query_fields=query_fields, update_fields=update_fields)
-        
-        # Log the result summary
-        if result.get("success", False):
-            logging.info(f"[UPDATE_CASE_TOOL] Successfully updated case matching: {json.dumps(query_fields, default=str)}")
-        else:
-            logging.warning(f"[UPDATE_CASE_TOOL] Failed to update case: {result.get('message')}")
-        
-        return result
     except ValidationError as e:
         # Log validation errors
         logging.error(f"[UPDATE_CASE_TOOL] Validation error: {str(e)}")
@@ -327,17 +419,17 @@ def update_case_tool(inputs: UpdateCaseArgs) -> dict:
         
         return {
             "success": False,
-            "message": f"Validation error: {str(e)}",
+            "message": f"Input validation error: {str(e)}",
             "error": True
         }
     except Exception as e:
         # Log any other exceptions
-        logging.error(f"[UPDATE_CASE_TOOL] Error: {str(e)}")
+        logging.error(f"[UPDATE_CASE_TOOL] Unexpected error: {str(e)}")
         logging.error(traceback.format_exc())
         
         return {
             "success": False,
-            "message": f"Error updating case: {str(e)}",
+            "message": f"Unexpected error during case update: {str(e)}",
             "error": True
         }
 

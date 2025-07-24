@@ -14,7 +14,11 @@ from tools.csi_tools import (
     approve_case_tool,
     update_case_tool,
     delete_case_tool,
-    read_approved_csi_tool
+    get_latest_cases_tool
+)
+from tools.approved_csi_tools import (
+    read_approved_csi_tool,
+    get_latest_approved_csi_tool
 )
 from tools.send_email_tool import bdm_send_email_tool
 from tools.dynamic_updates_tool import fetch_mandatory_fields_tool, fetch_process_activity_tool
@@ -48,9 +52,11 @@ tools = [
     update_case_tool,   # Update existing draft CSI cases
     delete_case_tool,   # Delete draft CSI cases
     approve_case_tool,  # Approve a case and move to approved_csi collection
+    get_latest_cases_tool,  # Get latest/newest CSI cases by creation timestamp
     
     # Approved CSI operations (final/read-only records)
     read_approved_csi_tool,  # Read/search approved CSI records
+    get_latest_approved_csi_tool,  # Get latest/newest approved CSI records by creation timestamp
     
     # Support tools
     bdm_send_email_tool,      # Send email notifications
