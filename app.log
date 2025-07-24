@@ -1,0 +1,162 @@
+2025-07-24 10:06:16,533 - __main__ - INFO - Starting CSI LangGraph Application...
+2025-07-24 10:06:16,533 - __main__ - INFO - Server configuration: host=0.0.0.0, port=8000, debug=False
+2025-07-24 10:06:40,165 - server - INFO - === PROCESS START [string-20250724100640165140] ===
+2025-07-24 10:06:40,165 - server - INFO - Creating new CSI agent instance for session: string
+2025-07-24 10:06:40,626 - server - INFO - [string-20250724100640165140] Loaded 0 messages for session 'string'
+2025-07-24 10:06:40,626 - server - INFO - [string-20250724100640165140] Injecting system prompt
+2025-07-24 10:06:40,629 - server - INFO - [string-20250724100640165140] Appending user message: hi
+2025-07-24 10:06:40,629 - server - INFO - [string-20250724100640165140] Calling CSI agent process_messages()
+2025-07-24 10:06:40,629 - main - INFO - Processing 2 messages for session: string
+2025-07-24 10:06:40,633 - main - INFO - DEBUG: Analyzing intent for user query: 'hi'
+2025-07-24 10:06:40,634 - main - INFO - DEBUG: Detected greeting, returning general_chat intent
+2025-07-24 10:06:40,635 - main - INFO - DEBUG: Generating sarcastic response for: 'hi'
+2025-07-24 10:06:43,217 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-07-24 10:06:43,257 - main - INFO - DEBUG: Generated sarcastic response: "Hey there! Just finished a thrilling game of 'Where's the Lost Shipment?' How can I assist you in the labyrinth of Customer Shipment Instructions today? Hopefully, your request won't require a map and a compass!"
+2025-07-24 10:06:43,259 - main - INFO - DEBUG: general_chat - tool_results: [{'status': 'success', 'message': '"Hey there! Just finished a thrilling game of \'Where\'s the Lost Shipment?\' How can I assist you in the labyrinth of Customer Shipment Instructions today? Hopefully, your request won\'t require a map and a compass!"', 'data': []}]
+2025-07-24 10:06:43,260 - main - INFO - DEBUG: Using tool result message: "Hey there! Just finished a thrilling game of 'Where's the Lost Shipment?' How can I assist you in the labyrinth of Customer Shipment Instructions today? Hopefully, your request won't require a map and a compass!"
+2025-07-24 10:06:43,262 - server - INFO - [string-20250724100640165140] Agent response: {'role': 'assistant', 'message': {'text': '"Hey there! Just finished a thrilling game of \'Where\'s the Lost Shipment?\' How can I assist you in the labyrinth of Customer Shipment Instructions today? Hopefully, your request won\'t require a map and a compass!"', 'action': 'show-message', 'data': []}}
+2025-07-24 10:06:43,262 - server - INFO - [string-20250724100640165140] Updated session memory to 3 messages
+2025-07-24 10:06:43,262 - server - INFO - === PROCESS END [string-20250724100640165140] ===
+
+2025-07-24 10:07:22,484 - server - INFO - === PROCESS START [string-20250724100722484504] ===
+2025-07-24 10:07:22,484 - server - INFO - [string-20250724100722484504] Loaded 3 messages for session 'string'
+2025-07-24 10:07:22,484 - server - INFO - [string-20250724100722484504] Refreshing system prompt to latest version
+2025-07-24 10:07:22,485 - server - INFO - [string-20250724100722484504] Appending user message: fetch pending cases
+2025-07-24 10:07:22,485 - server - INFO - [string-20250724100722484504] Calling CSI agent process_messages()
+2025-07-24 10:07:22,485 - main - INFO - Processing 4 messages for session: string
+2025-07-24 10:07:22,488 - main - INFO - DEBUG: Analyzing intent for user query: 'fetch pending cases'
+2025-07-24 10:07:24,935 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-07-24 10:07:24,937 - main - INFO - Detected intent: read_csi, reasoning: The user is asking to fetch pending cases, which refers to viewing or searching draft CSI cases that are in progress or not yet finalized.
+2025-07-24 10:07:24,940 - main - INFO - Executing tools for intent: read_csi
+2025-07-24 10:07:28,141 - tools.csi_tools - INFO - Reading CSI Cases using standardized CRUD function
+2025-07-24 10:07:28,142 - crud.cases_crud - INFO - Reading CSI Cases with kwargs=[], page=1
+2025-07-24 10:07:33,164 - db.connection - ERROR - Failed to connect to MongoDB: No servers found yet, Timeout: 5.0s, Topology Description: <TopologyDescription id: 6881b888e20234a9c42098c3, topology_type: Unknown, servers: [<ServerDescription ('35.207.230.78', 47017) server_type: Unknown, rtt: None>]>
+2025-07-24 10:07:33,164 - crud.cases_crud - ERROR - Unexpected error while reading Cases: Database connection failed: No servers found yet, Timeout: 5.0s, Topology Description: <TopologyDescription id: 6881b888e20234a9c42098c3, topology_type: Unknown, servers: [<ServerDescription ('35.207.230.78', 47017) server_type: Unknown, rtt: None>]>
+2025-07-24 10:07:33,169 - crud.cases_crud - ERROR - Traceback: Traceback (most recent call last):
+  File "/home/ronitsharma/lang-graph-demo/db/connection.py", line 32, in get_db_connection
+    client.admin.command('ping')
+  File "/home/ronitsharma/lang-graph-demo/lib/python3.10/site-packages/pymongo/_csot.py", line 125, in csot_wrapper
+    return func(self, *args, **kwargs)
+  File "/home/ronitsharma/lang-graph-demo/lib/python3.10/site-packages/pymongo/synchronous/database.py", line 926, in command
+    with self._client._conn_for_reads(read_preference, session, operation=command_name) as (
+  File "/home/ronitsharma/lang-graph-demo/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 1864, in _conn_for_reads
+    server = self._select_server(read_preference, session, operation)
+  File "/home/ronitsharma/lang-graph-demo/lib/python3.10/site-packages/pymongo/synchronous/mongo_client.py", line 1812, in _select_server
+    server = topology.select_server(
+  File "/home/ronitsharma/lang-graph-demo/lib/python3.10/site-packages/pymongo/synchronous/topology.py", line 409, in select_server
+    server = self._select_server(
+  File "/home/ronitsharma/lang-graph-demo/lib/python3.10/site-packages/pymongo/synchronous/topology.py", line 387, in _select_server
+    servers = self.select_servers(
+  File "/home/ronitsharma/lang-graph-demo/lib/python3.10/site-packages/pymongo/synchronous/topology.py", line 294, in select_servers
+    server_descriptions = self._select_servers_loop(
+  File "/home/ronitsharma/lang-graph-demo/lib/python3.10/site-packages/pymongo/synchronous/topology.py", line 344, in _select_servers_loop
+    raise ServerSelectionTimeoutError(
+pymongo.errors.ServerSelectionTimeoutError: No servers found yet, Timeout: 5.0s, Topology Description: <TopologyDescription id: 6881b888e20234a9c42098c3, topology_type: Unknown, servers: [<ServerDescription ('35.207.230.78', 47017) server_type: Unknown, rtt: None>]>
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ronitsharma/lang-graph-demo/crud/cases_crud.py", line 33, in read_cases
+    db = get_db_connection(COLLECTION)
+  File "/home/ronitsharma/lang-graph-demo/db/connection.py", line 56, in get_db_connection
+    raise ConnectionError(f"Database connection failed: {str(e)}")
+ConnectionError: Database connection failed: No servers found yet, Timeout: 5.0s, Topology Description: <TopologyDescription id: 6881b888e20234a9c42098c3, topology_type: Unknown, servers: [<ServerDescription ('35.207.230.78', 47017) server_type: Unknown, rtt: None>]>
+
+2025-07-24 10:07:33,173 - server - INFO - [string-20250724100722484504] Agent response: {'role': 'assistant', 'message': {'text': 'An unexpected error occurred during Case retrieval.', 'action': 'show-message', 'data': []}}
+2025-07-24 10:07:33,173 - server - INFO - [string-20250724100722484504] Updated session memory to 5 messages
+2025-07-24 10:07:33,173 - server - INFO - === PROCESS END [string-20250724100722484504] ===
+
+2025-07-24 10:09:40,935 - __main__ - INFO - Starting CSI LangGraph Application...
+2025-07-24 10:09:40,935 - __main__ - INFO - Server configuration: host=0.0.0.0, port=8000, debug=False
+2025-07-24 10:09:49,306 - server - INFO - === PROCESS START [string-20250724100949306720] ===
+2025-07-24 10:09:49,307 - server - INFO - Creating new CSI agent instance for session: string
+2025-07-24 10:09:49,697 - server - INFO - [string-20250724100949306720] Loaded 0 messages for session 'string'
+2025-07-24 10:09:49,697 - server - INFO - [string-20250724100949306720] Injecting system prompt
+2025-07-24 10:09:49,697 - server - INFO - [string-20250724100949306720] Appending user message: fetch pending cases
+2025-07-24 10:09:49,697 - server - INFO - [string-20250724100949306720] Calling CSI agent process_messages()
+2025-07-24 10:09:49,697 - main - INFO - Processing 2 messages for session: string
+2025-07-24 10:09:49,702 - main - INFO - DEBUG: Analyzing intent for user query: 'fetch pending cases'
+2025-07-24 10:09:51,615 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-07-24 10:09:51,624 - main - INFO - Detected intent: read_csi, reasoning: The user is asking to fetch pending cases, which indicates they want to view or search draft CSI cases that are still in progress or have not yet been approved.
+2025-07-24 10:09:51,627 - main - INFO - Executing tools for intent: read_csi
+2025-07-24 10:09:53,236 - tools.csi_tools - INFO - Reading CSI Cases using standardized CRUD function
+2025-07-24 10:09:53,237 - crud.cases_crud - INFO - Reading CSI Cases with kwargs=[], page=1
+2025-07-24 10:09:53,427 - db.connection - INFO - Successfully connected to MongoDB at mongodb://gocomet1:gocomet123@35.207.230.78:47017, database: agentic_ai_delivery_pre_uat
+2025-07-24 10:09:53,456 - db.connection - INFO - Collection 'cases' exists in database 'agentic_ai_delivery_pre_uat'.
+2025-07-24 10:09:53,456 - crud.cases_crud - INFO - Got DB connection for Case reading
+2025-07-24 10:09:53,456 - crud.cases_crud - INFO - Built query: {}
+2025-07-24 10:09:53,486 - crud.cases_crud - INFO - Total matching CSI Cases: 55
+2025-07-24 10:09:53,516 - crud.cases_crud - INFO - Retrieved 5 CSI Cases from database
+2025-07-24 10:09:53,520 - server - INFO - [string-20250724100949306720] Agent response: {'role': 'assistant', 'message': {'text': '55 CSI Cases found. Showing page 1/11 with 5 Cases.', 'action': 'render-vertical-table', 'data': [{'case_id': 'csi-case-1390', 'sold_to_code': '9000', 'sold_to_comp_name': 'PAN PACIFIC DEVELOPMENT LIMITED', 'ship_to_code': '0000', 'incoterm_1': 'CIF - Costs, Insurance & Freight', 'csi_status': 'pending', 'created_at': datetime.datetime(2025, 7, 16, 4, 53, 14, 868000), 'process_activity': 'Process: Create CSI workflow\nActivities:\nValidate data to ensure minimum mandatory requirements are met.\x0b\nCT team fills the required data in the form and submits the validated data for processing.\n\nUpdate the data in the database.\x0b\nMark the case as complete post database update.\n\n', 'modified_at': datetime.datetime(2025, 7, 23, 6, 18, 23, 897000), 'customer_email': 'unilever@gmail.com'}, {'case_id': 'csi-case-1561', 'sold_to_code': '1304', 'sold_to_comp_name': 'SWEETYET DEVELOPMENT PTE LTD', 'ship_to_code': '1304', 'incoterm_1': 'FCL', 'csi_status': 'pending', 'created_at': datetime.datetime(2025, 7, 16, 23, 9, 2, 868000), 'process_activity': 'Process: Create CSI workflow\nActivities:\nValidate data to ensure minimum mandatory requirements are met.\x0b\nCT team fills the required data in the form and submits the validated data for processing.\n\nUpdate the data in the database.\x0b\nMark the case as complete post database update.\n\n', 'modified_at': datetime.datetime(2025, 7, 23, 5, 29, 25, 729000)}, {'case_id': 'csi-case-5854', 'sold_to_code': '5758', 'sold_to_comp_name': 'AL GURG UNILEVER (LLC)', 'ship_to_code': '5758', 'incoterm_1': 'CIF - Costs, Insurance & Freight', 'csi_status': 'pending', 'created_at': datetime.datetime(2025, 7, 17, 1, 55, 35, 868000), 'process_activity': 'Process: Create CSI workflow\nActivities:\nValidate data to ensure minimum mandatory requirements are met.\x0b\nCT team fills the required data in the form and submits the validated data for processing.\n\nUpdate the data in the database.\x0b\nMark the case as complete post database update.\n\n'}, {'case_id': 'csi-case-6869', 'sold_to_code': '2992', 'sold_to_comp_name': 'PAN PACIFIC DEVELOPMENT LIMITED', 'ship_to_code': '2992', 'incoterm_1': 'CIF - Costs, Insurance & Freight', 'csi_status': 'pending', 'created_at': datetime.datetime(2025, 7, 16, 19, 26, 14, 868000), 'process_activity': 'Process: Create CSI workflow\nActivities:\nValidate data to ensure minimum mandatory requirements are met.\x0b\nCT team fills the required data in the form and submits the validated data for processing.\n\nUpdate the data in the database.\x0b\nMark the case as complete post database update.\n\n'}, {'case_id': 'csi-case-0893', 'sold_to_code': '7148', 'sold_to_comp_name': 'PAN PACIFIC DEVELOPMENT LIMITED', 'ship_to_code': '7148', 'incoterm_1': 'CIF - Costs, Insurance & Freight', 'csi_status': 'pending', 'created_at': datetime.datetime(2025, 7, 16, 13, 32, 16, 868000), 'process_activity': 'Process: Create CSI workflow\nActivities:\nValidate data to ensure minimum mandatory requirements are met.\x0b\nCT team fills the required data in the form and submits the validated data for processing.\n\nUpdate the data in the database.\x0b\nMark the case as complete post database update.\n\n'}]}}
+2025-07-24 10:09:53,520 - server - INFO - [string-20250724100949306720] Updated session memory to 3 messages
+2025-07-24 10:09:53,520 - server - INFO - === PROCESS END [string-20250724100949306720] ===
+
+2025-07-24 10:11:24,426 - __main__ - INFO - Starting CSI LangGraph Application...
+2025-07-24 10:11:24,426 - __main__ - INFO - Server configuration: host=0.0.0.0, port=8000, debug=False
+2025-07-24 10:11:28,620 - server - INFO - === PROCESS START [string-20250724101128620703] ===
+2025-07-24 10:11:28,621 - server - INFO - Creating new CSI agent instance for session: string
+2025-07-24 10:11:29,040 - server - INFO - [string-20250724101128620703] Loaded 0 messages for session 'string'
+2025-07-24 10:11:29,040 - server - INFO - [string-20250724101128620703] Injecting system prompt
+2025-07-24 10:11:29,040 - server - INFO - [string-20250724101128620703] Appending user message: fetch pending cases
+2025-07-24 10:11:29,040 - server - INFO - [string-20250724101128620703] Calling CSI agent process_messages()
+2025-07-24 10:11:29,041 - main - INFO - Processing 2 messages for session: string
+2025-07-24 10:11:29,044 - main - INFO - DEBUG: Analyzing intent for user query: 'fetch pending cases'
+2025-07-24 10:11:31,944 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-07-24 10:11:31,955 - main - INFO - Detected intent: read_csi, reasoning: The user is requesting to view or search draft CSI cases, which are pending or in-progress cases.
+2025-07-24 10:11:31,957 - main - INFO - Executing tools for intent: read_csi
+2025-07-24 10:11:44,856 - tools.csi_tools - INFO - Reading CSI Cases using standardized CRUD function
+2025-07-24 10:11:44,856 - crud.cases_crud - INFO - Reading CSI Cases with kwargs=[], page=1
+2025-07-24 10:11:45,049 - db.connection - INFO - Successfully connected to MongoDB at mongodb://gocomet1:gocomet123@35.207.230.78:47017, database: agentic_ai_delivery_pre_uat
+2025-07-24 10:11:45,079 - db.connection - INFO - Collection 'cases' exists in database 'agentic_ai_delivery_pre_uat'.
+2025-07-24 10:11:45,080 - crud.cases_crud - INFO - Got DB connection for Case reading
+2025-07-24 10:11:45,080 - crud.cases_crud - INFO - Built query: {}
+2025-07-24 10:11:45,110 - crud.cases_crud - INFO - Total matching CSI Cases: 55
+2025-07-24 10:11:45,140 - crud.cases_crud - INFO - Retrieved 5 CSI Cases from database
+2025-07-24 10:11:45,155 - server - INFO - [string-20250724101128620703] Agent response: {'role': 'assistant', 'message': {'text': '55 CSI Cases found. Showing page 1/11 with 5 Cases.', 'action': 'show-message', 'data': [{'case_id': 'csi-case-1390', 'sold_to_code': '9000', 'sold_to_comp_name': 'PAN PACIFIC DEVELOPMENT LIMITED', 'ship_to_code': '0000', 'incoterm_1': 'CIF - Costs, Insurance & Freight', 'csi_status': 'pending', 'created_at': datetime.datetime(2025, 7, 16, 4, 53, 14, 868000), 'process_activity': 'Process: Create CSI workflow\nActivities:\nValidate data to ensure minimum mandatory requirements are met.\x0b\nCT team fills the required data in the form and submits the validated data for processing.\n\nUpdate the data in the database.\x0b\nMark the case as complete post database update.\n\n', 'modified_at': datetime.datetime(2025, 7, 23, 6, 18, 23, 897000), 'customer_email': 'unilever@gmail.com'}, {'case_id': 'csi-case-1561', 'sold_to_code': '1304', 'sold_to_comp_name': 'SWEETYET DEVELOPMENT PTE LTD', 'ship_to_code': '1304', 'incoterm_1': 'FCL', 'csi_status': 'pending', 'created_at': datetime.datetime(2025, 7, 16, 23, 9, 2, 868000), 'process_activity': 'Process: Create CSI workflow\nActivities:\nValidate data to ensure minimum mandatory requirements are met.\x0b\nCT team fills the required data in the form and submits the validated data for processing.\n\nUpdate the data in the database.\x0b\nMark the case as complete post database update.\n\n', 'modified_at': datetime.datetime(2025, 7, 23, 5, 29, 25, 729000)}, {'case_id': 'csi-case-5854', 'sold_to_code': '5758', 'sold_to_comp_name': 'AL GURG UNILEVER (LLC)', 'ship_to_code': '5758', 'incoterm_1': 'CIF - Costs, Insurance & Freight', 'csi_status': 'pending', 'created_at': datetime.datetime(2025, 7, 17, 1, 55, 35, 868000), 'process_activity': 'Process: Create CSI workflow\nActivities:\nValidate data to ensure minimum mandatory requirements are met.\x0b\nCT team fills the required data in the form and submits the validated data for processing.\n\nUpdate the data in the database.\x0b\nMark the case as complete post database update.\n\n'}, {'case_id': 'csi-case-6869', 'sold_to_code': '2992', 'sold_to_comp_name': 'PAN PACIFIC DEVELOPMENT LIMITED', 'ship_to_code': '2992', 'incoterm_1': 'CIF - Costs, Insurance & Freight', 'csi_status': 'pending', 'created_at': datetime.datetime(2025, 7, 16, 19, 26, 14, 868000), 'process_activity': 'Process: Create CSI workflow\nActivities:\nValidate data to ensure minimum mandatory requirements are met.\x0b\nCT team fills the required data in the form and submits the validated data for processing.\n\nUpdate the data in the database.\x0b\nMark the case as complete post database update.\n\n'}, {'case_id': 'csi-case-0893', 'sold_to_code': '7148', 'sold_to_comp_name': 'PAN PACIFIC DEVELOPMENT LIMITED', 'ship_to_code': '7148', 'incoterm_1': 'CIF - Costs, Insurance & Freight', 'csi_status': 'pending', 'created_at': datetime.datetime(2025, 7, 16, 13, 32, 16, 868000), 'process_activity': 'Process: Create CSI workflow\nActivities:\nValidate data to ensure minimum mandatory requirements are met.\x0b\nCT team fills the required data in the form and submits the validated data for processing.\n\nUpdate the data in the database.\x0b\nMark the case as complete post database update.\n\n'}]}}
+2025-07-24 10:11:45,155 - server - INFO - [string-20250724101128620703] Updated session memory to 3 messages
+2025-07-24 10:11:45,155 - server - INFO - === PROCESS END [string-20250724101128620703] ===
+
+2025-07-24 10:12:28,639 - server - INFO - === PROCESS START [string-20250724101228638982] ===
+2025-07-24 10:12:28,639 - server - INFO - [string-20250724101228638982] Loaded 3 messages for session 'string'
+2025-07-24 10:12:28,639 - server - INFO - [string-20250724101228638982] Refreshing system prompt to latest version
+2025-07-24 10:12:28,639 - server - INFO - [string-20250724101228638982] Appending user message: sold to code is 1900, create case
+2025-07-24 10:12:28,639 - server - INFO - [string-20250724101228638982] Calling CSI agent process_messages()
+2025-07-24 10:12:28,639 - main - INFO - Processing 4 messages for session: string
+2025-07-24 10:12:28,642 - main - INFO - DEBUG: Analyzing intent for user query: 'sold to code is 1900, create case'
+2025-07-24 10:12:30,100 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-07-24 10:12:30,102 - main - INFO - Detected intent: create_csi, reasoning: The user provided a 'sold to code' and mentioned 'create case', indicating they want to create a new draft CSI case.
+2025-07-24 10:12:30,989 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-07-24 10:12:33,504 - server - INFO - [string-20250724101228638982] Agent response: {'role': 'assistant', 'message': {'text': 'Cute attempt, but you forgot: ship_to_code, customer_email. Try again, genius.', 'action': 'render-vertical-table', 'data': [{'sold_to_code': '1900', 'ship_to_code': '', 'customer_email': ''}]}}
+2025-07-24 10:12:33,504 - server - INFO - [string-20250724101228638982] Updated session memory to 5 messages
+2025-07-24 10:12:33,504 - server - INFO - === PROCESS END [string-20250724101228638982] ===
+
+2025-07-24 10:13:12,839 - server - INFO - === PROCESS START [string-20250724101312838999] ===
+2025-07-24 10:13:12,839 - server - INFO - [string-20250724101312838999] Loaded 5 messages for session 'string'
+2025-07-24 10:13:12,839 - server - INFO - [string-20250724101312838999] Refreshing system prompt to latest version
+2025-07-24 10:13:12,839 - server - INFO - [string-20250724101312838999] Appending user message: ship to code is 2000 and customer email is paul@unilever.com
+2025-07-24 10:13:12,839 - server - INFO - [string-20250724101312838999] Calling CSI agent process_messages()
+2025-07-24 10:13:12,839 - main - INFO - Processing 6 messages for session: string
+2025-07-24 10:13:12,842 - main - INFO - DEBUG: Analyzing intent for user query: 'ship to code is 2000 and customer email is paul@unilever.com'
+2025-07-24 10:13:14,869 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-07-24 10:13:14,871 - main - INFO - Detected intent: create_csi, reasoning: User is providing additional details required for creating a draft CSI case, following an earlier message where the assistant indicated missing information for case creation.
+2025-07-24 10:13:15,925 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-07-24 10:13:17,569 - server - INFO - [string-20250724101312838999] Agent response: {'role': 'assistant', 'message': {'text': 'Cute attempt, but you forgot: sold_to_code. Try again, genius.', 'action': 'render-vertical-table', 'data': [{'ship_to_code': '2000', 'customer_email': 'paul@unilever.com', 'sold_to_code': ''}]}}
+2025-07-24 10:13:17,569 - server - INFO - [string-20250724101312838999] Updated session memory to 7 messages
+2025-07-24 10:13:17,569 - server - INFO - === PROCESS END [string-20250724101312838999] ===
+
+2025-07-24 10:13:31,796 - server - INFO - === PROCESS START [string-20250724101331796696] ===
+2025-07-24 10:13:31,796 - server - INFO - [string-20250724101331796696] Loaded 7 messages for session 'string'
+2025-07-24 10:13:31,796 - server - INFO - [string-20250724101331796696] Refreshing system prompt to latest version
+2025-07-24 10:13:31,797 - server - INFO - [string-20250724101331796696] Appending user message: ship to code is 2000 and customer email is paul@unilever.com and sold to code is 1000
+2025-07-24 10:13:31,797 - server - INFO - [string-20250724101331796696] Calling CSI agent process_messages()
+2025-07-24 10:13:31,797 - main - INFO - Processing 8 messages for session: string
+2025-07-24 10:13:31,800 - main - INFO - DEBUG: Analyzing intent for user query: 'ship to code is 2000 and customer email is paul@unilever.com and sold to code is 1000'
+2025-07-24 10:13:33,708 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-07-24 10:13:33,711 - main - INFO - Detected intent: create_csi, reasoning: User is providing mandatory fields to create a new draft CSI case.
+2025-07-24 10:13:34,641 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-07-24 10:13:36,093 - server - INFO - [string-20250724101331796696] Agent response: {'role': 'assistant', 'message': {'text': "I've extracted the following fields: ship_to_code: 2000, customer_email: paul@unilever.com, sold_to_code: 1000. Should I proceed to create the case?", 'action': 'show-message', 'data': []}}
+2025-07-24 10:13:36,094 - server - INFO - [string-20250724101331796696] Updated session memory to 9 messages
+2025-07-24 10:13:36,094 - server - INFO - === PROCESS END [string-20250724101331796696] ===
+
+2025-07-24 10:30:26,273 - __main__ - INFO - Starting CSI LangGraph Application...
+2025-07-24 10:30:26,273 - __main__ - INFO - Server configuration: host=0.0.0.0, port=8000, debug=False
