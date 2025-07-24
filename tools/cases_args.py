@@ -152,3 +152,4 @@ class CSIToolArgs(BaseModel, extra="allow"):
     page: Optional[int] = 1
     customer_name: Optional[str] = ""
     customer_email: Optional[str] = ""
+    limit: Optional[int] = 1

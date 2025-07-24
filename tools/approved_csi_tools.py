@@ -105,6 +105,7 @@ def get_latest_approved_csi_tool(inputs: CSIToolArgs) -> dict:
     try:
         # Extract limit parameter, default to 2
         dumped_data = inputs.model_dump()
+        print(dumped_data)
         logging.info(f"[GET_LATEST_APPROVED_CSI_TOOL] Dumped data: {dumped_data}")
         
         limit = dumped_data.get('limit', 2)
