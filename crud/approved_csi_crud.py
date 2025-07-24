@@ -110,7 +110,7 @@ def read_approved_csi(page: int = 1, **kwargs) -> dict:
         return {"status": "error", "message": f"An unexpected error occurred: {str(e)}", "data": []}
 
 
-def get_latest_approved_csi(limit: int = 2) -> dict:
+def get_latest_approved_csi(limit: int = 1) -> dict:
     """
     Get the latest/newest approved CSI records based on created_at timestamp.
     

@@ -1,5 +1,5 @@
 from langchain_core.tools import tool
-from crud.approved_csi_crud import read_approved_csi
+from crud.approved_csi_crud import read_approved_csi, get_latest_approved_csi
 from pydantic import ValidationError
 from tools.cases_args import CSIToolArgs
 import logging
@@ -11,14 +11,15 @@ def read_approved_csi_tool(inputs: CSIToolArgs) -> dict:
     """
     Retrieve Approved CSI (Customer Shipment Instruction) records from the database using advanced filtering and pagination.
 
-    This tool accepts multiple optional filtering parameters based on the Approved CSI schema and returns up to 5 records per page.
+    This tool searches the 'approved_csi' collection which contains final approved CSI records.
+    For draft/pending CSI records that have not yet been approved, use the read_cases_tool instead.
 
     === Capabilities ===
-    - Supports full-text, case-insensitive search on string fields.
-    - Accepts MongoDB ObjectId (`id` or `_id`) when provided.
-    - Filters only non-empty fields automatically.
-    - Paginates results using the `page` parameter (default: 1).
-    - Returns a summary message and matched records.
+    - Supports full-text, case-insensitive search on string fields
+    - Accepts MongoDB ObjectId (`id` or `_id`) when provided
+    - Filters only non-empty fields automatically
+    - Paginates results using the `page` parameter (default: 1)
+    - Returns a structured response with status, message, and data fields
 
     === Filterable Fields ===
     You can provide any of the following fields as filters:
@@ -51,18 +52,38 @@ def read_approved_csi_tool(inputs: CSIToolArgs) -> dict:
     preloading_photos, shipping_mark_on_pallet, create_date, modify_date, csi_status
 
     === Returns ===
-    - A message with the total number of matching records and page info.
-    - A list of up to 5 matched Approved CSI documents (with `_id` removed).
+    - success: Boolean indicating if the operation succeeded
+    - message: Description of the result with count of matching records
+    - data: Array of matching approved CSI records (with `_id` removed)
+    - error: Boolean indicating if an error occurred (only present on error)
 
     Example Usage:
-    Use this tool to search for Approved CSI records using any of the fields of the schema with exact name from schema and paginate through the results.
+    Use this tool to search for historical approved CSI records that have completed the approval process.
+    These records are read-only and represent the final state of each CSI case.
     """
-
-    data = {k: v for k, v in inputs.model_dump().items() if v not in ("", None)}
-    print(f"[APPROVED CSI READ TOOL] Called with inputs={data}")
-    result = find_in_approved_csi_collection(**data)
-    print(f"[APPROVED CSI READ TOOL] Result: {result}")
-    return result
+    try:
+        # Extract page parameter and filter out empty values
+        data = {k: v for k, v in inputs.model_dump().items() if v not in ("", None)}
+        page = data.pop('page', 1)
+        
+        logging.info(f"[APPROVED CSI READ TOOL] Called with inputs={data}, page={page}")
+        
+        # Call the CRUD function with proper parameters
+        result = read_approved_csi(page=page, **data)
+        
+        logging.info(f"[APPROVED CSI READ TOOL] Result: {result}")
+        return result
+        
+    except Exception as e:
+        error_msg = f"Error in read_approved_csi_tool: {str(e)}"
+        logging.error(error_msg)
+        logging.error(traceback.format_exc())
+        return {
+            "success": False,
+            "error": True,
+            "message": error_msg,
+            "data": []
+        }
 
 read_approved_csi_tool.name = "approved_csi_read_tool"
 
@@ -92,7 +113,6 @@ def get_latest_approved_csi_tool(inputs: CSIToolArgs) -> dict:
             
         logging.info(f"[GET_LATEST_APPROVED_CSI_TOOL] Getting latest approved CSI with limit: {limit}")
         
-        from crud.approved_csi_crud import get_latest_approved_csi
         result = get_latest_approved_csi(limit=limit)
         
         if result.get('status') == 'success':
