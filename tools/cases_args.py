@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
 
-class CSIToolArgs(BaseModel):
+class CSIToolArgs(BaseModel, extra="allow"):
     sold_to_code: Optional[str] = ""
     sold_to_comp_name: Optional[str] = ""
     sold_to_comp_add1: Optional[str] = ""
