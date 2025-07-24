@@ -1,4 +1,4 @@
-from db.connection import get_db_connection
+from db.connection import get_db_connection, get_db_collection
 from pymongo.errors import PyMongoError, DuplicateKeyError
 from bson import ObjectId
 import re
@@ -46,9 +46,9 @@ def read_cases(page: int = 1, **kwargs) -> dict:
     """
     print(f"[CASES READ] Called with kwargs={kwargs}, page={page}")
     try:
-        db = get_db_connection(COLLECTION)
-        print("[CASES READ] Got DB connection")
-        coll = db[COLLECTION]
+        # Use optimized connection pooling
+        coll = get_db_collection(COLLECTION)
+        print("[CASES READ] Got DB collection from connection pool")
 
         # Extract special parameters
         sort_params = kwargs.pop('sort', None)
@@ -126,9 +126,9 @@ def create_case(**kwargs) -> dict:
     """
     print("[CASES CREATE] Called with kwargs:", kwargs)
     try:
-        db = get_db_connection(COLLECTION)
-        print("[CASES CREATE] Got DB connection")
-        coll = db[COLLECTION]
+        # Use optimized connection pooling
+        coll = get_db_collection(COLLECTION)
+        print("[CASES CREATE] Got DB collection from connection pool")
 
         # Add default fields if not provided
         if "case_id" not in kwargs:
@@ -217,9 +217,9 @@ def update_case(query_fields: dict = None, update_fields: dict = None, **kwargs)
     print(f"[CASES UPDATE] Additional kwargs: {kwargs}")
     
     try:
-        db = get_db_connection(COLLECTION)
-        coll = db[COLLECTION]
-        print("[CASES UPDATE] Got DB connection")
+        # Use optimized connection pooling
+        coll = get_db_collection(COLLECTION)
+        print("[CASES UPDATE] Got DB collection from connection pool")
 
         # Build query from multiple sources
         parsed_query = {}
@@ -343,9 +343,9 @@ def delete_case(query_fields: dict) -> dict:
     """
     print("[CASES DELETE] Called with query_fields:", query_fields)
     try:
-        db = get_db_connection(COLLECTION)
-        coll = db[COLLECTION]
-        print("[CASES DELETE] Got DB connection")
+        # Use optimized connection pooling
+        coll = get_db_collection(COLLECTION)
+        print("[CASES DELETE] Got DB collection from connection pool")
         
         # Build query
         parsed_query = {}
@@ -399,9 +399,9 @@ def approve_case(case_id: str = None, **kwargs) -> dict:
     """
     logging.info(f"[CASES APPROVE] Called with case_id: {case_id}, kwargs: {kwargs}")
     try:
-        db = get_db_connection(COLLECTION)
-        logging.info("[CASES APPROVE] Got DB connection")
-        coll = db[COLLECTION]
+        # Use optimized connection pooling
+        coll = get_db_collection(COLLECTION)
+        logging.info("[CASES APPROVE] Got DB collection from connection pool")
 
         # Validate case_id
         if not case_id:
@@ -459,9 +459,9 @@ def approve_case(case_id: str = None, **kwargs) -> dict:
             logging.error(f"[CASES APPROVE] Failed to retrieve updated case {case_id}")
             return {"success": False, "message": f"Failed to retrieve updated case after approval.", "data": []}
 
-        # Copy to approved_csi collection
+        # Copy to approved_csi collection using optimized connection
         logging.info(f"[CASES APPROVE] Copying case {case_id} to approved_csi collection")
-        approved_coll = db["approved_csi"]
+        approved_coll = get_db_collection("approved_csi")
         case_copy = dict(updated_case)
         case_copy.pop("_id")  # Remove MongoDB _id
         
@@ -512,9 +512,9 @@ def get_latest_cases(limit: int = 2) -> dict:
     """
     logging.info(f"[GET LATEST CASES] Called with limit: {limit}")
     try:
-        db = get_db_connection(COLLECTION)
-        logging.info("[GET LATEST CASES] Got DB connection")
-        coll = db[COLLECTION]
+        # Use optimized connection pooling
+        coll = get_db_collection(COLLECTION)
+        logging.info("[GET LATEST CASES] Got DB collection from connection pool")
         
         # Query for latest cases sorted by created_at descending
         cursor = coll.find({}).sort("created_at", -1).limit(limit)
@@ -564,8 +564,8 @@ def get_case_by_id(case_id: str) -> dict:
     """
     print(f"[CASES GET_BY_ID] Called with case_id: {case_id}")
     try:
-        db = get_db_connection(COLLECTION)
-        coll = db[COLLECTION]
+        # Use optimized connection pooling
+        coll = get_db_collection(COLLECTION)
         case = coll.find_one({"case_id": case_id})
         if not case:
             return {"status": "error", "message": f"Case with ID {case_id} not found.", "data": []}
@@ -598,8 +598,8 @@ def get_case_object_id_by_query(query: dict) -> str:
     """
     print("[CASES GET_OBJECT_ID] Called with query:", query)
     try:
-        db = get_db_connection(COLLECTION)
-        coll = db[COLLECTION]
+        # Use optimized connection pooling
+        coll = get_db_collection(COLLECTION)
         doc = coll.find_one(query)
         print("[CASES GET_OBJECT_ID] Found document:", doc)
         

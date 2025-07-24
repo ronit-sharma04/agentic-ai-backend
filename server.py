@@ -2,7 +2,7 @@ from fastapi import Body, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from sqlalchemy import true,false
-from db.connection import get_db_connection
+from db.connection import get_db_connection, get_db_collection, initialize_db_connection, close_db_connection, get_db_connection_info
 from main import process_messages
 import datetime
 import json
@@ -10,8 +10,31 @@ from typing import Collection, Dict, List, Any, Optional, Literal
 import re
 from fetch_business_ruleset import fetch_business_ruleset
 from system_prompt import fetch_system_prompt
+import atexit
+import logging
 
 app = FastAPI()
+
+# Initialize database connection pool at startup
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database connection pool when server starts."""
+    try:
+        initialize_db_connection()
+        logging.info("[SERVER] Database connection pool initialized successfully")
+    except Exception as e:
+        logging.error(f"[SERVER] Failed to initialize database connection: {e}")
+        raise
+
+# Close database connection on shutdown
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Close database connection when server shuts down."""
+    try:
+        close_db_connection()
+        logging.info("[SERVER] Database connection closed successfully")
+    except Exception as e:
+        logging.error(f"[SERVER] Error closing database connection: {e}")
 
 app.add_middleware(
     CORSMiddleware,
@@ -524,8 +547,8 @@ def upsert_case(case: Dict[str, Any] = Body(...)):
         raise HTTPException(status_code=400, detail="Missing 'case_id' in request body")
 
     print("Connecting to DB...")
-    db = get_db_connection(COLLECTION_NAME)
-    collection: Collection = db[COLLECTION_NAME]
+    # Use optimized connection pooling
+    collection: Collection = get_db_collection(COLLECTION_NAME)
     print("Connected to collection:", COLLECTION_NAME)
 
     case_id = case["case_id"]
@@ -556,3 +579,36 @@ def upsert_case(case: Dict[str, Any] = Body(...)):
 
     print("Returning response:", response)
     return response
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint that includes database connection status."""
+    try:
+        db_info = get_db_connection_info()
+        return {
+            "status": "healthy",
+            "timestamp": datetime.datetime.now().isoformat(),
+            "database": db_info
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "timestamp": datetime.datetime.now().isoformat(),
+            "error": str(e),
+            "database": {"connected": False}
+        }
+
+@app.get("/db-status")
+async def database_status():
+    """Detailed database connection status endpoint."""
+    try:
+        db_info = get_db_connection_info()
+        return {
+            "database_connection": db_info,
+            "timestamp": datetime.datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "error": str(e),
+            "timestamp": datetime.datetime.now().isoformat()
+        }

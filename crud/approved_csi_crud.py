@@ -1,4 +1,4 @@
-from db.connection import get_db_connection
+from db.connection import get_db_connection, get_db_collection
 from pymongo.errors import PyMongoError, DuplicateKeyError
 from bson import ObjectId
 import re
@@ -43,9 +43,9 @@ def read_approved_csi(page: int = 1, **kwargs) -> dict:
     """
     print(f"[APPROVED_CSI READ] Called with kwargs={kwargs}, page={page}")
     try:
-        db = get_db_connection(COLLECTION)
-        print("[APPROVED_CSI READ] Got DB connection")
-        coll = db[COLLECTION]
+        # Use optimized connection pooling
+        coll = get_db_collection(COLLECTION)
+        print("[APPROVED_CSI READ] Got DB collection from connection pool")
 
         # Build query
         query = {}
@@ -122,9 +122,9 @@ def get_latest_approved_csi(limit: int = 1) -> dict:
     """
     print(f"[GET LATEST APPROVED CSI] Called with limit: {limit}")
     try:
-        db = get_db_connection(COLLECTION)
-        print("[GET LATEST APPROVED CSI] Got DB connection")
-        coll = db[COLLECTION]
+        # Use optimized connection pooling
+        coll = get_db_collection(COLLECTION)
+        print("[GET LATEST APPROVED CSI] Got DB collection from connection pool")
         
         # Query for latest approved CSI records sorted by created_at descending
         cursor = coll.find({}).sort("created_at", -1).limit(limit)
@@ -175,9 +175,9 @@ def create_approved_csi(**kwargs) -> dict:
     """
     print("[APPROVED_CSI CREATE] Called with kwargs:", kwargs)
     try:
-        db = get_db_connection(COLLECTION)
-        print("[APPROVED_CSI CREATE] Got DB connection")
-        coll = db[COLLECTION]
+        # Use optimized connection pooling
+        coll = get_db_collection(COLLECTION)
+        print("[APPROVED_CSI CREATE] Got DB collection from connection pool")
 
         # Add approval timestamp
         kwargs["approved_at"] = datetime.datetime.now(datetime.timezone.utc)
@@ -241,9 +241,9 @@ def update_approved_csi(query_fields: dict, update_fields: dict) -> dict:
     print(f"[APPROVED_CSI UPDATE] Query fields: {query_fields}")
     print(f"[APPROVED_CSI UPDATE] Update fields: {update_fields}")
     try:
-        db = get_db_connection(COLLECTION)
-        coll = db[COLLECTION]
-        print("[APPROVED_CSI UPDATE] Got DB connection")
+        # Use optimized connection pooling
+        coll = get_db_collection(COLLECTION)
+        print("[APPROVED_CSI UPDATE] Got DB collection from connection pool")
 
         # Build query
         parsed_query = {}
@@ -309,9 +309,9 @@ def delete_approved_csi(query_fields: dict) -> dict:
     """
     print("[APPROVED_CSI DELETE] Called with query_fields:", query_fields)
     try:
-        db = get_db_connection(COLLECTION)
-        coll = db[COLLECTION]
-        print("[APPROVED_CSI DELETE] Got DB connection")
+        # Use optimized connection pooling
+        coll = get_db_collection(COLLECTION)
+        print("[APPROVED_CSI DELETE] Got DB collection from connection pool")
         
         # Build query
         parsed_query = {}
