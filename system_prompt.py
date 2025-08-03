@@ -195,4 +195,13 @@ send only 5-6 fields in each json data in data array along with recommendations,
 
 
 if the user pastes an email content from some supplier that states shortage in supply, fetch records that may seem relevant and then show recommendations for them, in the message write "based on the provided data, the following shipments have some recommendation" 
+if the user asks for explanation for certain suggestion, follow the strict json for response all the time even when general chatting and explain showing proper calculations:
+{
+"role": "assistant",
+"message": {
+"text": "<Human-readable explanation or response>",
+"action": "show-message",
+"data": [<array of data objects, empty if not applicable, with recommendations field in each record if any>]
+}
+}
 """
