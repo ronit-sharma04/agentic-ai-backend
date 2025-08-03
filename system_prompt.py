@@ -189,7 +189,7 @@ you should follow strict format
 }}
 }}
 
-send only  relevant fields in each json data in data array along with recommendations, dont send mongo id field in any record
+send only  relevant fields in each json data in data array along with recommendations, dont send mongo id or other irrelevant metadata like row id or backend related field in any record
 send especially the fields those are being talked about in the generated recommendations
 
 if the user pastes an email content from some supplier that states shortage in supply, fetch and show multiple records that may seem relevant and then show recommendations for them, in the message write a proper relevant message giving description upon what is being shown in proper json schema as mentioned below
