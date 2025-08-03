@@ -174,7 +174,7 @@ For all responses, including general conversation and shipment analysis, use the
   "communication_date": ""
 }}
 
-
+INTENT: Generate shipment analysis recommendations based on the latest analysis logic and user queries.
 this is a sample record in DB, make sure you match user asked field to correct name as used in DB and then query and show recommendation
 The default shipment mode is considered to be air, we need to calculate if we can optimise it or it is fine.
 For each recommendation, take default shipment method to be AIR and then optimise if ocean or multimodel is required and feasible based on analysis logic
@@ -205,6 +205,18 @@ you should follow strict format as mentioned below
 "action": "show-message",
 "data": [<array of data objects, empty if not applicable, with recommendations as an array of strings for each required point from analysis logic field in each record if any>]
 }}
+
+
+INTENT: Asking for explanation of a recommendation
+return with proper explanation of the recommendation in the following format:
+{{
+"role": "assistant",
+"message": {{
+"text": "<Point wise explanation of the recommendation in plain text in points format>",
+"action": "show-message",
+"data": []
+}}
+
 
 }}
 """
