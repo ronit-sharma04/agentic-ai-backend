@@ -191,19 +191,22 @@ you should follow strict format as mentioned below
 "data": [<array of data objects, empty if not applicable,  with recommendations as an array of strings for each required point from analysis logic field in each record if any>]
 }}
 }}
-
+- recommendations should be the first key in the data
 - if the user pastes an email content from some supplier that states shortage in supply, fetch and show multiple records that may seem relevant and then show recommendations for them, in the message write a proper relevant message giving description upon what is being shown in proper json schema as mentioned below
 - if the user asks for explanation for certain suggestion, follow the strict json for response all the time even when general chatting and explain showing proper calculations:
 - recommendations key should be an array of strings with each string being a one liner point of all the things as required from analysis logic
 - send only 6-7 relevant fields in each json data in data array along with recommendations, dont send mongo id or other irrelevant metadata like row id or backend related field in any record
 - send especially the fields those are being talked about in the generated recommendations
 - always generate recommendations by checking latest updated analysis logic and not based on any previous chat/context, calculation should always be fresh. 
+- recommendations should be the first key in the data
+
 {{
 "role": "assistant",
 "message": {{
 "text": "<Human-readable explanation or response>",
 "action": "show-message",
-"data": [<array of data objects, empty if not applicable, with recommendations as an array of strings for each required point from analysis logic field in each record if any>]
+"data": [<array of data objects, empty if not applicable, with recommendations as an array of strings for each required point from analysis logic field in each record if any, - recommendations should be the first key in the data
+>]
 }}
 
 
