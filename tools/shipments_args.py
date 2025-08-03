@@ -1,0 +1,163 @@
+from pydantic import BaseModel
+from typing import Optional
+
+class ShipmentsToolArgs(BaseModel, extra="allow"):
+    """Arguments for Shipments tools with flexible field support for all shipment fields"""
+
+    # Pagination
+    page: Optional[int] = 1
+
+    # Customer and Party Information
+    row_number: Optional[str] = ""
+    name1_of_sold_to_party: Optional[str] = ""
+    sold_to_party: Optional[str] = ""
+    name1_of_ship_to_party: Optional[str] = ""
+    ship_to_party: Optional[str] = ""
+    customer_po_number: Optional[str] = ""
+    customer_po_item: Optional[str] = ""
+    customer_po_date: Optional[str] = ""
+    customer_stock_reservation: Optional[str] = ""
+    cust_purch_order_type: Optional[str] = ""
+
+    # Order and Shipment Info
+    index: Optional[str] = ""
+    ph_sales_order: Optional[str] = ""
+    sales_document: Optional[str] = ""
+    item: Optional[str] = ""
+    production_order: Optional[str] = ""
+    prod_order_status: Optional[str] = ""
+    shipment_number: Optional[str] = ""
+    outbound_delivery_number: Optional[str] = ""
+    outbound_delivery_item: Optional[str] = ""
+    outbound_delivery_date: Optional[str] = ""
+
+    # Dates
+    customer_crd: Optional[str] = ""
+    ph_po_stat_date: Optional[str] = ""
+    actual_gi_date: Optional[str] = ""
+    gr_date_in_ph: Optional[str] = ""
+    requested_delivery_date: Optional[str] = ""
+    contractual_delivery_date_lo: Optional[str] = ""
+    contractual_gi_date: Optional[str] = ""
+    planned_gi_date: Optional[str] = ""
+    delivery_date: Optional[str] = ""
+    invoice_date: Optional[str] = ""
+    old_crd: Optional[str] = ""
+    customer_clean_date: Optional[str] = ""
+    confirmed_date: Optional[str] = ""
+    created_on: Optional[str] = ""
+    document_date: Optional[str] = ""
+    ab_date: Optional[str] = ""
+    la_date: Optional[str] = ""
+    supplier_po_date: Optional[str] = ""
+    supplier_po_delivery_date: Optional[str] = ""
+    mad_communication_date: Optional[str] = ""
+    goods_issue_communication_date: Optional[str] = ""
+    communication_date: Optional[str] = ""
+
+    # Delivery Performance
+    arrival_lt_crd: Optional[str] = ""
+    arrival_lt_stat_date: Optional[str] = ""
+    no_of_days_arrive_early: Optional[str] = ""
+    no_of_days_early_vs_stat_2: Optional[str] = ""
+
+    # Quantities
+    ordered_quantity: Optional[str] = ""
+    open_qty: Optional[str] = ""
+    confirmed_quantity: Optional[str] = ""
+    unconfirmed_quantity: Optional[str] = ""
+    invoiced_qty: Optional[str] = ""
+    ab_qty: Optional[str] = ""
+    la_qty: Optional[str] = ""
+    ir_qty: Optional[str] = ""
+    delivery_quantity: Optional[str] = ""
+    supplier_po_order_qty: Optional[str] = ""
+    supplier_po_delivered_quantity: Optional[str] = ""
+
+    # Product and Material Info
+    material: Optional[str] = ""
+    customer_material: Optional[str] = ""
+    material_description: Optional[str] = ""
+    product_weight: Optional[str] = ""
+    weight_unit: Optional[str] = ""
+    order_weight_in_gram: Optional[str] = ""
+    sales_unit_of_measure: Optional[str] = ""
+    loq_large_order_quantity: Optional[str] = ""
+    loq_rule: Optional[str] = ""
+
+    # Logistics and Shipping
+    shipping_conditions: Optional[str] = ""
+    po_ship_condition: Optional[str] = ""
+    transport_lt: Optional[str] = ""
+    route: Optional[str] = ""
+    shipping_point: Optional[str] = ""
+    delivery_group: Optional[str] = ""
+    order_combination: Optional[str] = ""
+
+    # Vendor and Supplier Info
+    fixed_vendor: Optional[str] = ""
+    supplier_po_number: Optional[str] = ""
+    supplier_po_item: Optional[str] = ""
+
+    # Financials
+    so_net_price: Optional[str] = ""
+    po_net_price: Optional[str] = ""
+    currency: Optional[str] = ""
+
+    # Org Info
+    plant: Optional[str] = ""
+    sales_organization: Optional[str] = ""
+    distribution_channel: Optional[str] = ""
+    division: Optional[str] = ""
+    sales_office: Optional[str] = ""
+    sales_group: Optional[str] = ""
+    purchasing_group: Optional[str] = ""
+    mrp_controller: Optional[str] = ""
+    mrp_group: Optional[str] = ""
+
+    # Invoice
+    invoice: Optional[str] = ""
+    invoiced_count: Optional[str] = ""
+
+    # Flags & Status
+    overall_cred_stat: Optional[str] = ""
+    complete_order_flag: Optional[str] = ""
+    delivery_in_advance_allowed: Optional[str] = ""
+    created_by: Optional[str] = ""
+    processing_status: Optional[str] = ""
+    select: Optional[str] = ""
+    loq_processed_item: Optional[str] = ""
+    loq_monitoring: Optional[str] = ""
+    overall_so_item_status: Optional[str] = ""
+    reason_of_rejection: Optional[str] = ""
+    item_delivery_block: Optional[str] = ""
+    delivery_block_header: Optional[str] = ""
+    purchase_requisition: Optional[str] = ""
+    material_stock_reservation: Optional[str] = ""
+    automatic_batch: Optional[str] = ""
+    staging_document: Optional[str] = ""
+    second_confirmed_gi_date: Optional[str] = ""
+    critical_part: Optional[str] = ""
+    risky_delay: Optional[str] = ""
+    contractual_committed_group_delivery_dat: Optional[str] = ""
+    contractual_committed_group_gi_date: Optional[str] = ""
+    contractual_committed_group_mad: Optional[str] = ""
+    contractual_over_rlt: Optional[str] = ""
+    confirmed_over_rlt: Optional[str] = ""
+    express_line: Optional[str] = ""
+    forward_order: Optional[str] = ""
+    fo_og_customer_crd: Optional[str] = ""
+    helios_code: Optional[str] = ""
+    commercial_status: Optional[str] = ""
+    dto_relevant_item: Optional[str] = ""
+    complete_delivery_flag_from_fodc: Optional[str] = ""
+    preponed_rescheduling_counter: Optional[str] = ""
+    postponed_rescheduling_counter: Optional[str] = ""
+    total_of_rescheduling: Optional[str] = ""
+    crd_change: Optional[str] = ""
+    vip_order_status: Optional[str] = ""
+    key_account_type: Optional[str] = ""
+    commited_gi_date: Optional[str] = ""
+    lcos: Optional[str] = ""
+    pilot_code: Optional[str] = ""
+    description: Optional[str] = ""
