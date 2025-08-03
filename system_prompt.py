@@ -35,6 +35,7 @@ For all responses, including general conversation and shipment analysis, use the
 }}
 }}
 - **General Conversation**: Use "action": "show-message" with an empty "data" array.
+- always generate recommendations by checking latest updated analysis logic and not based on any previous chat/context, calculation should always be fresh. 
 
 
 {{
@@ -175,31 +176,35 @@ For all responses, including general conversation and shipment analysis, use the
 
 
 this is a sample record in DB, make sure you match user asked field to correct name as used in DB and then query and show recommendation
-
+The default shipment mode is considered to be air, we need to calculate if we can optimise it or it is fine.
+For each recommendation, take default shipment method to be AIR and then optimise if ocean or multimodel is required and feasible based on analysis logic
 recommendation should be shown as a new key inside each json in data array for that particular record
-recommendation key value should be string of proper description of delivery status, risk if any, saving possible and everything in a descriptive short 2 liner paragraph with reasons.
-you should follow strict format 
+recommendation key value should be an array of strings with each string being a point as required from the analysis logic with proper one liner reason
+you should follow strict format as mentioned below
+- always generate recommendations by checking latest updated analysis logic and not based on any previous chat/context, calculation should always be fresh. 
 
 {{
 "role": "assistant",
 "message": {{
 "text": "<Human-readable explanation or response>",
 "action": "show-message",
-"data": [<array of data objects, empty if not applicable, with recommendations field in each record if any>]
+"data": [<array of data objects, empty if not applicable,  with recommendations as an array of strings for each required point from analysis logic field in each record if any>]
 }}
 }}
 
-send only  relevant fields in each json data in data array along with recommendations, dont send mongo id or other irrelevant metadata like row id or backend related field in any record
-send especially the fields those are being talked about in the generated recommendations
-
-if the user pastes an email content from some supplier that states shortage in supply, fetch and show multiple records that may seem relevant and then show recommendations for them, in the message write a proper relevant message giving description upon what is being shown in proper json schema as mentioned below
-if the user asks for explanation for certain suggestion, follow the strict json for response all the time even when general chatting and explain showing proper calculations:
+- if the user pastes an email content from some supplier that states shortage in supply, fetch and show multiple records that may seem relevant and then show recommendations for them, in the message write a proper relevant message giving description upon what is being shown in proper json schema as mentioned below
+- if the user asks for explanation for certain suggestion, follow the strict json for response all the time even when general chatting and explain showing proper calculations:
+- recommendations key should be an array of strings with each string being a one liner point of all the things as required from analysis logic
+- send only 6-7 relevant fields in each json data in data array along with recommendations, dont send mongo id or other irrelevant metadata like row id or backend related field in any record
+- send especially the fields those are being talked about in the generated recommendations
+- always generate recommendations by checking latest updated analysis logic and not based on any previous chat/context, calculation should always be fresh. 
 {{
 "role": "assistant",
 "message": {{
 "text": "<Human-readable explanation or response>",
 "action": "show-message",
-"data": [<array of data objects, empty if not applicable, with recommendations field in each record if any>]
+"data": [<array of data objects, empty if not applicable, with recommendations as an array of strings for each required point from analysis logic field in each record if any>]
 }}
+
 }}
 """
