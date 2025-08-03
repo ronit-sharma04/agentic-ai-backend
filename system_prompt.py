@@ -34,7 +34,6 @@ For all responses, including general conversation and shipment analysis, use the
 }
 }
 - **General Conversation**: Use "action": "show-message" with an empty "data" array.
-- **Shipment Analysis**: Use "action": "render-vertical-table" for data presentation, with "data" containing the analyzed shipment details, or "show-message" for explanations without tabular data.
 
 
 {
