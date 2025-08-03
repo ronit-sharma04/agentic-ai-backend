@@ -113,7 +113,7 @@ def read_shipments(page: int = 1, **kwargs) -> dict:
 
 def get_latest_shipments(limit: int = 5) -> dict:
     """
-    Get the latest/newest shipments based on creation timestamp or document order.
+    Get the latest/newest shipments based on creation timestamp.
     
     Args:
         limit: Number of latest shipments to return (default: 5)
@@ -125,8 +125,8 @@ def get_latest_shipments(limit: int = 5) -> dict:
     try:
         coll = get_db_collection(COLLECTION)
         
-        # Get latest records (MongoDB natural order is insertion order)
-        cursor = coll.find({}).limit(limit)
+        # Get latest records sorted by created_at field in descending order
+        cursor = coll.find({}).sort("created_at", -1).limit(limit)
         results = list(cursor)
         
         # Remove ObjectId from results for JSON serialization

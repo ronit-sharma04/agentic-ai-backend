@@ -113,21 +113,21 @@ read_shipments_tool.name = "read_shipments_tool"
 @tool
 def get_latest_shipments_tool(inputs: ShipmentsToolArgs) -> dict:
     """
-    Get the latest/newest shipment records based on insertion order.
+    Get the latest/newest shipment records based on created_at timestamp.
     Useful when user asks for "latest shipments", "newest shipments", "recent shipments", etc.
     
     Args:
-        inputs: Tool arguments (can include limit parameter, defaults to 5)
+        inputs: Tool arguments (can include limit parameter, defaults to 2)
         
     Returns:
-        dict: Contains success status, message, and data with latest shipments
+        dict: Contains success status, message, and data with latest shipments sorted by created_at desc
     """
     try:
         # Convert inputs to dict
         input_dict = inputs.dict() if hasattr(inputs, 'dict') else dict(inputs)
         
-        # Extract limit parameter, default to 5
-        limit = input_dict.get('limit', 5)
+        # Extract limit parameter, default to 2
+        limit = input_dict.get('limit', 2)
         
         print(f"[LATEST SHIPMENTS TOOL] Calling get_latest_shipments with limit: {limit}")
         

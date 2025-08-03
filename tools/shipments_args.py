@@ -4,8 +4,9 @@ from typing import Optional
 class ShipmentsToolArgs(BaseModel, extra="allow"):
     """Arguments for Shipments tools with flexible field support for all shipment fields"""
 
-    # Pagination
+    # Pagination and Limits
     page: Optional[int] = 1
+    limit: Optional[int] = 2
 
     # Customer and Party Information
     row_number: Optional[str] = ""
