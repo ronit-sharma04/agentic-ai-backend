@@ -20,6 +20,11 @@ from tools.approved_csi_tools import (
     read_approved_csi_tool,
     get_latest_approved_csi_tool
 )
+from tools.shipments_tools import (
+    read_shipments_tool,
+    get_latest_shipments_tool,
+    get_shipment_by_id_tool
+)
 from tools.send_email_tool import bdm_send_email_tool
 from tools.dynamic_updates_tool import fetch_mandatory_fields_tool, fetch_process_activity_tool
 from langchain_core.output_parsers import JsonOutputKeyToolsParser
@@ -46,22 +51,12 @@ llm = ChatOpenAI(
     temperature=0,
 )
 tools = [
-    # CSI Case operations (draft/pending records)
-    create_cases_tool,  # Create new draft CSI cases
-    read_cases_tool,    # Read/search draft CSI cases
-    update_case_tool,   # Update existing draft CSI cases
-    delete_case_tool,   # Delete draft CSI cases
-    approve_case_tool,  # Approve a case and move to approved_csi collection
-    get_latest_cases_tool,  # Get latest/newest CSI cases by creation timestamp
-    
-    # Approved CSI operations (final/read-only records)
-    read_approved_csi_tool,  # Read/search approved CSI records
-    get_latest_approved_csi_tool,  # Get latest/newest approved CSI records by creation timestamp
-    
-    # Support tools
-    bdm_send_email_tool,      # Send email notifications
-    fetch_mandatory_fields_tool,  # Get required fields for case creation
-    fetch_process_activity_tool   # Get current process activity status
+
+    # Shipments operations (logistics data)
+    read_shipments_tool,  # Read/search shipment records
+    get_latest_shipments_tool,  # Get latest/newest shipment records
+    get_shipment_by_id_tool,  # Get specific shipment by ID
+
 ]
 
 cases_agent = create_react_agent(llm, tools)
