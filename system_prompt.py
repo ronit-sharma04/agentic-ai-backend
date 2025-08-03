@@ -193,4 +193,6 @@ you should follow strict format
 
 send only 5-6 fields in each json data in data array along with recommendations, dont send mongo id field in any record
 
+
+if the user pastes an email content from some supplier that states shortage in supply, fetch records that may seem relevant and then show recommendations for them, in the message write "based on the provided data, the following shipments have some recommendation" 
 """
